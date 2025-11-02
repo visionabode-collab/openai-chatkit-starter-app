@@ -72,19 +72,21 @@ export function ChatKitPanel({
     };
   }, []);
 
-  // FIX: Override links to open in parent window instead of new tabs
-  useEffect(() => {
-    const handleLinkClick = (e: MouseEvent) => {
-      const link = (e.target as HTMLElement).closest('a');
-      if (link && link.target === '_blank') {
-        e.preventDefault();
-        window.parent.location.href = link.href;
-      }
-    };
-    
-    document.addEventListener('click', handleLinkClick);
-    return () => document.removeEventListener('click', handleLinkClick);
-  }, []);
+// FIX: Override links to open in parent window instead of new tabs
+    useEffect(() => {
+      const handleLinkClick = (e: Event) => {
+        const link = (e.target as HTMLElement)?.closest('a');
+        if (link && link.getAttribute('target') === '_blank') {
+          e.preventDefault();
+          if (window.parent && link.href) {
+            window.parent.location.href = link.href;
+          }
+        }
+      };
+      
+      document.addEventListener('click', handleLinkClick);
+      return () => document.removeEventListener('click', handleLinkClick);
+    }, []);
 
   useEffect(() => {
     if (!isBrowser) {
