@@ -53,7 +53,7 @@ export function ChatKitPanel({
   const [errors, setErrors] = useState<ErrorState>(() => createInitialErrors());
   const [isInitializingSession, setIsInitializingSession] = useState(true);
   const isMountedRef = useRef(true);
-  const [scriptStatus, setScriptStatus] = useState<
+  const [scriptStatus, setScriptStatus] = useState
     "pending" | "ready" | "error"
   >(() =>
     isBrowser && window.customElements?.get("openai-chatkit")
@@ -70,6 +70,20 @@ export function ChatKitPanel({
     return () => {
       isMountedRef.current = false;
     };
+  }, []);
+
+  // FIX: Override links to open in parent window instead of new tabs
+  useEffect(() => {
+    const handleLinkClick = (e: MouseEvent) => {
+      const link = (e.target as HTMLElement).closest('a');
+      if (link && link.target === '_blank') {
+        e.preventDefault();
+        window.parent.location.href = link.href;
+      }
+    };
+    
+    document.addEventListener('click', handleLinkClick);
+    return () => document.removeEventListener('click', handleLinkClick);
   }, []);
 
   useEffect(() => {
