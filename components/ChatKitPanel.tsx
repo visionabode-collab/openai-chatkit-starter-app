@@ -43,7 +43,7 @@ export default function ChatKitPanel({
   onResponseEnd,
   onThemeRequest
 }: ChatKitPanelProps) {
-  
+
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chatKit = useChatKit();
   const [error, setError] = useState<ErrorState>({
@@ -52,27 +52,36 @@ export default function ChatKitPanel({
     integration: null
   });
 
-  // 🟣 REMOVE TOP SPACING FIX BELOW -------------------------
-  // This ensures the ChatKit UI sits flush against its container
-  // by forcing margin and padding to zero on load.
+  // 🔥 FINAL FIX: Remove internal ChatKit top spacing
   useEffect(() => {
-    if (containerRef.current) {
-      const container = containerRef.current;
+    if (!containerRef.current) return;
 
-      container.style.marginTop = "0px";
-      container.style.paddingTop = "0px";
+    const applyFix = () => {
+      const ck = containerRef.current!.querySelector("openai-chatkit");
+      if (ck) {
+        const root = ck.shadowRoot;
+        if (!root) return;
 
-      // Target the internal ChatKit wrapper after mount
-      setTimeout(() => {
-        const internal = container.querySelector("openai-chatkit");
-        if (internal) {
-          (internal as HTMLElement).style.marginTop = "0px";
-          (internal as HTMLElement).style.paddingTop = "0px";
-        }
-      }, 50);
-    }
+        // Inject a <style> tag directly inside shadow DOM
+        const style = document.createElement("style");
+        style.textContent = `
+          :host {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+          }
+          .chat-root, .chat-container, .message-container {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+          }
+        `;
+        root.appendChild(style);
+      }
+    };
+
+    // Wait for shadow DOM to initialize
+    const timeout = setTimeout(applyFix, 150);
+    return () => clearTimeout(timeout);
   }, []);
-  // 🟣 END FIX ----------------------------------------------
 
   const handleFactAction = useCallback(
     async (payload: any) => {
@@ -143,8 +152,8 @@ export default function ChatKitPanel({
         style={{
           width: "100%",
           height: "100%",
-          marginTop: 0,
-          paddingTop: 0
+          margin: 0,
+          padding: 0
         }}
       />
     </div>
