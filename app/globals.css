@@ -32,3 +32,48 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+/* ============================================
+   CUSTOM CHATKIT TYPING INDICATOR
+   ============================================ */
+
+/* Hide the default three dots animation */
+openai-chatkit [class*="typing"] [class*="dot"],
+openai-chatkit [class*="loading"] [class*="dot"],
+openai-chatkit .typing-indicator-dots,
+openai-chatkit [data-testid*="typing"] {
+  display: none !important;
+}
+
+/* Create "typing..." text indicator */
+openai-chatkit [class*="typing-indicator"]::before,
+openai-chatkit [class*="assistant-typing"]::before,
+openai-chatkit [data-state="loading"]::before {
+  content: "typing..." !important;
+  color: #94a3b8;
+  font-size: 14px;
+  font-style: italic;
+  padding: 8px 16px;
+  display: inline-block;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Alternative: If the above doesn't work, target the container */
+openai-chatkit [role="status"]::after {
+  content: "typing...";
+  color: #94a3b8;
+  font-size: 14px;
+  font-style: italic;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Hide any spinning loaders */
+openai-chatkit [class*="spinner"],
+openai-chatkit [class*="loader"] {
+  display: none !important;
+}
