@@ -6,7 +6,7 @@ import {
   useRef,
   useState
 } from "react";
-import { ChatKit, useChatKit } from "@openai/chatkit-react";
+import { ChatKit } from "@openai/chatkit-react";
 import {
   STARTER_PROMPTS,
   PLACEHOLDER_INPUT,
@@ -37,7 +37,7 @@ type ErrorState = {
   integration: string | null;
 };
 
-const SESSION_STORAGE_KEY = 'wescu_chat_session';
+const SESSION_KEY = 'wescu_chat_session_v1';
 
 export function ChatKitPanel({
   theme,
@@ -52,16 +52,63 @@ export function ChatKitPanel({
     session: null,
     integration: null
   });
-  const [persistedSession, setPersistedSession] = useState<string | null>(null);
 
-  // Load persisted session on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(SESSION_STORAGE_KEY);
-      if (saved) {
-        console.log('📂 Restored chat session from localStorage');
-        setPersistedSession(saved);
+  // Custom session creation with persistence
+  const createSessionWithPersistence = useCallback(async () => {
+    // Try to get existing session from localStorage
+    const savedSession = typeof window !== 'undefined' 
+      ? localStorage.getItem(SESSION_KEY) 
+      : null;
+
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // If we have a saved session, try to resume it
+      if (savedSession) {
+        headers['x-session-id'] = savedSession;
+        console.log('🔄 Attempting to resume chat session');
+      } else {
+        console.log('🆕 Creating new chat session');
       }
+
+      const response = await fetch(CREATE_SESSION_ENDPOINT, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          workflow: { id: WORKFLOW_ID },
+          chatkit_configuration: {
+            file_upload: {
+              enabled: true,
+            },
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Session API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const sessionId = data.client_secret;
+
+      // Save session to localStorage
+      if (sessionId && typeof window !== 'undefined') {
+        localStorage.setItem(SESSION_KEY, sessionId);
+        console.log('💾 Chat session saved');
+      }
+
+      return sessionId;
+    } catch (err) {
+      console.error('Session creation error:', err);
+      // If resume fails, clear storage and try creating new session
+      if (savedSession && typeof window !== 'undefined') {
+        localStorage.removeItem(SESSION_KEY);
+        console.log('❌ Session resume failed, starting fresh');
+        return createSessionWithPersistence();
+      }
+      throw err;
     }
   }, []);
 
@@ -118,14 +165,6 @@ export function ChatKitPanel({
     []
   );
 
-  const handleSessionChange = useCallback((payload: { session_id?: string }) => {
-    if (payload?.session_id && typeof window !== 'undefined') {
-      console.log('💾 Saving chat session to localStorage');
-      localStorage.setItem(SESSION_STORAGE_KEY, payload.session_id);
-      setPersistedSession(payload.session_id);
-    }
-  }, []);
-
   return (
     <div
       ref={containerRef}
@@ -150,13 +189,11 @@ export function ChatKitPanel({
         starterPrompts={STARTER_PROMPTS}
         placeholder={PLACEHOLDER_INPUT}
         greeting={GREETING}
-        sessionEndpoint={CREATE_SESSION_ENDPOINT}
-        sessionId={persistedSession || undefined}
+        getClientSecret={createSessionWithPersistence}
         onWidgetAction={handleFactAction}
         onMessagesEnd={handleMessagesEnd}
         onThemeRequest={handleThemeChange}
         onError={handleError}
-        onSessionChange={handleSessionChange}
         style={{
           width: "100%",
           height: "100%",
