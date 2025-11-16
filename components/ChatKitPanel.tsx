@@ -37,7 +37,7 @@ type ErrorState = {
   integration: string | null;
 };
 
-export default function ChatKitPanel({
+export function ChatKitPanel({
   theme,
   onWidgetAction,
   onResponseEnd,
