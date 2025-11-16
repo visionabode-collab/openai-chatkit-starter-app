@@ -20,13 +20,13 @@ const getGreeting = (): string => {
   const hour = new Date().getHours();
   let timeGreeting = "Hello";
   
-  if (hour >= 5 && hour < 12) {
+  if (hour >= 0 && hour < 12) {
     timeGreeting = "Good Morning";
   } else if (hour >= 12 && hour < 17) {
     timeGreeting = "Good Afternoon";
   } else if (hour >= 17 && hour < 21) {
     timeGreeting = "Good Evening";
-  } else {
+  } else if (hour >= 21 && hour <= 23) {
     timeGreeting = "Good Night";
   }
   
