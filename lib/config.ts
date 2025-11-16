@@ -5,12 +5,11 @@ export const WORKFLOW_ID =
 
 export const CREATE_SESSION_ENDPOINT = "/api/create-session";
 
-// Remove default “What can you do?” starter prompt
 export const STARTER_PROMPTS: StartScreenPrompt[] = [];
 
 export const PLACEHOLDER_INPUT = "Ask anything...";
 
-// Time-based WESCU greeting – Good Morning starts 12:00 AM
+// Time-based WESCU greeting with 12:01 AM = Morning
 export const getGreeting = (): string => {
   const hour = new Date().getHours();
   let timeGreeting = "Hello";
@@ -30,33 +29,7 @@ export const getGreeting = (): string => {
 
 export const GREETING = getGreeting();
 
-// Theme adjustments to fix alignment, padding, and font size
 export const getThemeConfig = (theme: ColorScheme): ThemeOption => ({
-  // Fix text alignment + greeting spacing
-  typography: {
-    body: {
-      textAlign: "left",
-      fontSize: "14px",
-      lineHeight: "1.45",
-    },
-    greeting: {
-      textAlign: "left",
-      fontSize: "15px",    // smaller greeting
-      lineHeight: "1.5",
-      marginTop: "4px",     // reduce giant top padding
-    },
-  },
-
-  layout: {
-    message: {
-      padding: "8px 12px",   // tighter spacing
-      maxWidth: "95%",       // prevents “wide block”
-    },
-    container: {
-      paddingTop: "6px",     // fixes huge top spacing
-    },
-  },
-
   color: {
     grayscale: {
       hue: 220,
@@ -68,6 +41,19 @@ export const getThemeConfig = (theme: ColorScheme): ThemeOption => ({
       level: 1,
     },
   },
-
   radius: "round",
+
+  // 🔥 Fix message padding & font size
+  components: {
+    message: {
+      padding: "8px 16px", // pulls text upward
+    },
+  },
+
+  text: {
+    body: {
+      fontSize: "16px",
+      lineHeight: "22px",
+    },
+  },
 });
