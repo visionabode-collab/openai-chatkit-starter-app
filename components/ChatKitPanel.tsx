@@ -37,6 +37,8 @@ type ErrorState = {
   integration: string | null;
 };
 
+const SESSION_STORAGE_KEY = 'wescu_chat_session';
+
 export function ChatKitPanel({
   theme,
   onWidgetAction,
@@ -50,6 +52,18 @@ export function ChatKitPanel({
     session: null,
     integration: null
   });
+  const [persistedSession, setPersistedSession] = useState<string | null>(null);
+
+  // Load persisted session on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (saved) {
+        console.log('📂 Restored chat session from localStorage');
+        setPersistedSession(saved);
+      }
+    }
+  }, []);
 
   // Remove top spacing
   useEffect(() => {
@@ -104,6 +118,14 @@ export function ChatKitPanel({
     []
   );
 
+  const handleSessionChange = useCallback((payload: { session_id?: string }) => {
+    if (payload?.session_id && typeof window !== 'undefined') {
+      console.log('💾 Saving chat session to localStorage');
+      localStorage.setItem(SESSION_STORAGE_KEY, payload.session_id);
+      setPersistedSession(payload.session_id);
+    }
+  }, []);
+
   return (
     <div
       ref={containerRef}
@@ -129,10 +151,12 @@ export function ChatKitPanel({
         placeholder={PLACEHOLDER_INPUT}
         greeting={GREETING}
         sessionEndpoint={CREATE_SESSION_ENDPOINT}
+        sessionId={persistedSession || undefined}
         onWidgetAction={handleFactAction}
         onMessagesEnd={handleMessagesEnd}
         onThemeRequest={handleThemeChange}
         onError={handleError}
+        onSessionChange={handleSessionChange}
         style={{
           width: "100%",
           height: "100%",
