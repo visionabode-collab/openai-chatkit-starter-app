@@ -1,19 +1,18 @@
-import { ColorScheme, StartScreenPrompt, ThemeOption } from "@openai/chatkit";
+import { ColorScheme, ThemeOption } from "@openai/chatkit";
 
 export const WORKFLOW_ID =
   process.env.NEXT_PUBLIC_CHATKIT_WORKFLOW_ID?.trim() ?? "";
 
 export const CREATE_SESSION_ENDPOINT = "/api/create-session";
 
-export const STARTER_PROMPTS: StartScreenPrompt[] = [];
-
 export const PLACEHOLDER_INPUT = "Ask anything...";
 
-// Time-based WESCU greeting with 12:01 AM = Morning
+// Time-based WESCU greeting
 export const getGreeting = (): string => {
   const hour = new Date().getHours();
   let timeGreeting = "Hello";
 
+  // Trinidad rule
   if (hour >= 0 && hour < 12) {
     timeGreeting = "Good Morning";
   } else if (hour >= 12 && hour < 17) {
@@ -42,18 +41,4 @@ export const getThemeConfig = (theme: ColorScheme): ThemeOption => ({
     },
   },
   radius: "round",
-
-  // 🔥 Fix message padding & font size
-  components: {
-    message: {
-      padding: "8px 16px", // pulls text upward
-    },
-  },
-
-  text: {
-    body: {
-      fontSize: "16px",
-      lineHeight: "22px",
-    },
-  },
 });
