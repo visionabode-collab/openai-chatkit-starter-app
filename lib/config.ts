@@ -58,6 +58,11 @@ export const getThemeConfig = (theme: ColorScheme): ThemeOption => ({
     },
   },
   spacing: {
-    scale: 0.8,
+    scale: 0.5,
+    containerPadding: 8,
+    messagePadding: 8,
+  },
+  layout: {
+    compactMode: true,
   },
 });
