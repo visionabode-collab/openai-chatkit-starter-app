@@ -77,3 +77,23 @@ openai-chatkit [class*="spinner"],
 openai-chatkit [class*="loader"] {
   display: none !important;
 }
+
+/* ============================================
+   HIDE AUTO-GENERATED CONVERSATION TITLE
+   ============================================ */
+
+/* Hide the "Friendly AI User Chat" title */
+openai-chatkit [class*="conversation-title"],
+openai-chatkit [class*="thread-title"],
+openai-chatkit [data-testid*="conversation-title"],
+openai-chatkit h1,
+openai-chatkit h2 {
+  display: none !important;
+}
+
+/* Hide any header text that appears above messages */
+openai-chatkit header h1,
+openai-chatkit header h2,
+openai-chatkit [role="heading"] {
+  display: none !important;
+}
