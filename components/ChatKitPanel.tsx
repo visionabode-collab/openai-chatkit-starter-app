@@ -43,60 +43,45 @@ export function ChatKitPanel({
   onResponseEnd,
   onThemeRequest
 }: ChatKitPanelProps) {
-
+  
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const chatKit = useChatKit();
   const [error, setError] = useState<ErrorState>({
     script: null,
     session: null,
     integration: null
   });
 
-  // 🔥 FINAL FIX: Remove internal ChatKit top spacing
+  // Remove top spacing
   useEffect(() => {
-    if (!containerRef.current) return;
-
-    const applyFix = () => {
-      const ck = containerRef.current!.querySelector("openai-chatkit");
-      if (ck) {
-        const root = ck.shadowRoot;
-        if (!root) return;
-
-        // Inject a <style> tag directly inside shadow DOM
-        const style = document.createElement("style");
-        style.textContent = `
-          :host {
-            margin-top: 0 !important;
-            padding-top: 0 !important;
-          }
-          .chat-root, .chat-container, .message-container {
-            margin-top: 0 !important;
-            padding-top: 0 !important;
-          }
-        `;
-        root.appendChild(style);
-      }
-    };
-
-    // Wait for shadow DOM to initialize
-    const timeout = setTimeout(applyFix, 150);
-    return () => clearTimeout(timeout);
+    if (containerRef.current) {
+      const container = containerRef.current;
+      container.style.marginTop = "0px";
+      container.style.paddingTop = "0px";
+      
+      setTimeout(() => {
+        const internal = container.querySelector("openai-chatkit");
+        if (internal) {
+          (internal as HTMLElement).style.marginTop = "0px";
+          (internal as HTMLElement).style.paddingTop = "0px";
+        }
+      }, 50);
+    }
   }, []);
 
   const handleFactAction = useCallback(
-    async (payload: any) => {
+    async (payload: { action?: FactAction }) => {
       if (!payload?.action) return;
       if (payload.action.type === "save") {
-        await onWidgetAction(payload.action as FactAction);
+        await onWidgetAction(payload.action);
       }
     },
     [onWidgetAction]
   );
 
   const handleThemeChange = useCallback(
-    (payload: any) => {
+    (payload: { scheme?: ColorScheme }) => {
       if (payload?.scheme) {
-        onThemeRequest(payload.scheme as ColorScheme);
+        onThemeRequest(payload.scheme);
       }
     },
     [onThemeRequest]
@@ -107,13 +92,13 @@ export function ChatKitPanel({
   }, [onResponseEnd]);
 
   const handleError = useCallback(
-    (payload: any) => {
+    (payload: { type?: string; error?: string }) => {
       if (payload.type === "script_error") {
-        setError((prev) => ({ ...prev, script: payload.error }));
+        setError((prev) => ({ ...prev, script: payload.error || null }));
       } else if (payload.type === "session_error") {
-        setError((prev) => ({ ...prev, session: payload.error }));
+        setError((prev) => ({ ...prev, session: payload.error || null }));
       } else if (payload.type === "integration_error") {
-        setError((prev) => ({ ...prev, integration: payload.error }));
+        setError((prev) => ({ ...prev, integration: payload.error || null }));
       }
     },
     []
@@ -137,7 +122,6 @@ export function ChatKitPanel({
           integration={error.integration}
         />
       ) : null}
-
       <ChatKit
         workflow={WORKFLOW_ID}
         theme={getThemeConfig(theme)}
@@ -152,8 +136,8 @@ export function ChatKitPanel({
         style={{
           width: "100%",
           height: "100%",
-          margin: 0,
-          padding: 0
+          marginTop: 0,
+          paddingTop: 0
         }}
       />
     </div>
