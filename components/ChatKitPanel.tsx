@@ -137,7 +137,7 @@ export function ChatKitPanel({
 
   const handleThemeChange = useCallback(
     (payload: { scheme?: ColorScheme }) => {
-      if (payload.scheme) {
+      if (payload?.scheme) {
         onThemeRequest(payload.scheme);
       }
     },
@@ -150,27 +150,16 @@ export function ChatKitPanel({
 
   const handleError = useCallback(
     (payload: { type?: string; error?: string }) => {
-      setError(prev => {
-        if (payload.type === "script_error") {
-          return { ...prev, script: payload.error || null };
-        }
-        if (payload.type === "session_error") {
-          return { ...prev, session: payload.error || null };
-        }
-        if (payload.type === "integration_error") {
-          return { ...prev, integration: payload.error || null };
-        }
-        return prev;
-      });
+      if (payload.type === "script_error") {
+        setError((prev) => ({ ...prev, script: payload.error || null }));
+      } else if (payload.type === "session_error") {
+        setError((prev) => ({ ...prev, session: payload.error || null }));
+      } else if (payload.type === "integration_error") {
+        setError((prev) => ({ ...prev, integration: payload.error || null }));
+      }
     },
     []
   );
-
-  const mergedErrorMessage =
-    error.script ||
-    error.session ||
-    error.integration ||
-    null;
 
   return (
     <div
@@ -183,12 +172,16 @@ export function ChatKitPanel({
         padding: 0
       }}
     >
-      {mergedErrorMessage ? (
-        <ErrorOverlay message={mergedErrorMessage} />
+      {error.script || error.session || error.integration ? (
+        <ErrorOverlay
+          script={error.script}
+          session={error.session}
+          integration={error.integration}
+        />
       ) : null}
 
       <ChatKit
-        config={{ workflow: WORKFLOW_ID }}  // ✅ Correct API
+        config={{ workflow: WORKFLOW_ID }}
         theme={getThemeConfig(theme)}
         starterPrompts={STARTER_PROMPTS}
         placeholder={PLACEHOLDER_INPUT}
