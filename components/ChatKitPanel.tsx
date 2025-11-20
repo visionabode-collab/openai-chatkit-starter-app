@@ -181,7 +181,6 @@ export function ChatKitPanel({
       ) : null}
 
       <ChatKit
-        config={{ workflow: WORKFLOW_ID }}
         theme={getThemeConfig(theme)}
         starterPrompts={STARTER_PROMPTS}
         placeholder={PLACEHOLDER_INPUT}
