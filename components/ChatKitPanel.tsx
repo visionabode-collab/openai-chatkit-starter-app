@@ -53,9 +53,6 @@ export function ChatKitPanel({
     integration: null
   });
 
-  // ------------------------------
-  // CREATE / RESTORE SESSION LOGIC
-  // ------------------------------
   const createSessionWithPersistence = useCallback(async () => {
     const savedSession =
       typeof window !== "undefined"
@@ -111,9 +108,6 @@ export function ChatKitPanel({
     }
   }, []);
 
-  // ------------------------------
-  // REMOVE TOP SPACING FROM CHATKIT
-  // ------------------------------
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
@@ -130,9 +124,6 @@ export function ChatKitPanel({
     }, 50);
   }, []);
 
-  // ------------------------------
-  // CALLBACK HANDLERS
-  // ------------------------------
   const handleFactAction = useCallback(
     async (payload: { action?: FactAction }) => {
       if (!payload?.action) return;
@@ -175,18 +166,12 @@ export function ChatKitPanel({
     []
   );
 
-  // ------------------------------
-  // MERGE ALL ERRORS INTO ONE MESSAGE
-  // ------------------------------
   const mergedErrorMessage =
     error.script ||
     error.session ||
     error.integration ||
     null;
 
-  // ------------------------------
-  // RENDER
-  // ------------------------------
   return (
     <div
       ref={containerRef}
@@ -203,7 +188,7 @@ export function ChatKitPanel({
       ) : null}
 
       <ChatKit
-        config={{ workflow: WORKFLOW_ID }}   // ✅ FIX — replace removed "workflow" prop
+        config={{ workflow: WORKFLOW_ID }}  // ✅ Correct API
         theme={getThemeConfig(theme)}
         starterPrompts={STARTER_PROMPTS}
         placeholder={PLACEHOLDER_INPUT}
