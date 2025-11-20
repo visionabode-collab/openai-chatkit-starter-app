@@ -1,13 +1,16 @@
 "use client";
 
 type ErrorOverlayProps =
-  | { message: string }                         // New unified message model
-  | { script?: string | null; session?: string | null; integration?: string | null }; // Legacy support
+  | { message: string } // unified message model
+  | {
+      script?: string | null;
+      session?: string | null;
+      integration?: string | null;
+    }; // backward compatibility
 
 export function ErrorOverlay(props: ErrorOverlayProps) {
   let message: string;
 
-  // Support both new and old prop shapes
   if ("message" in props && props.message) {
     message = props.message;
   } else {
