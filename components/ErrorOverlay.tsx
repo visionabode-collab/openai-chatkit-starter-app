@@ -1,17 +1,22 @@
 "use client";
 
-type ErrorOverlayProps = {
-  script: string | null;
-  session: string | null;
-  integration: string | null;
-};
+type ErrorOverlayProps =
+  | { message: string }                         // New unified message model
+  | { script?: string | null; session?: string | null; integration?: string | null }; // Legacy support
 
-export function ErrorOverlay({ script, session, integration }: ErrorOverlayProps) {
-  const message =
-    script ??
-    session ??
-    integration ??
-    "An unknown error occurred while loading the assistant.";
+export function ErrorOverlay(props: ErrorOverlayProps) {
+  let message: string;
+
+  // Support both new and old prop shapes
+  if ("message" in props && props.message) {
+    message = props.message;
+  } else {
+    message =
+      props.script ??
+      props.session ??
+      props.integration ??
+      "An unknown error occurred while loading the assistant.";
+  }
 
   return (
     <div
