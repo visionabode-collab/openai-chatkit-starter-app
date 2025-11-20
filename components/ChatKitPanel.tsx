@@ -177,7 +177,6 @@ export function ChatKitPanel({
 
   // ------------------------------
   // MERGE ALL ERRORS INTO ONE MESSAGE
-  // (Fixes Vercel type failure)
   // ------------------------------
   const mergedErrorMessage =
     error.script ||
@@ -204,7 +203,7 @@ export function ChatKitPanel({
       ) : null}
 
       <ChatKit
-        workflow={WORKFLOW_ID}
+        config={{ workflow: WORKFLOW_ID }}   // ✅ FIX — replace removed "workflow" prop
         theme={getThemeConfig(theme)}
         starterPrompts={STARTER_PROMPTS}
         placeholder={PLACEHOLDER_INPUT}
