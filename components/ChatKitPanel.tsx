@@ -37,7 +37,7 @@ type ErrorState = {
   integration: string | null;
 };
 
-const SESSION_KEY = 'wescu_chat_session_v1';
+const SESSION_KEY = "wescu_chat_session_v1";
 
 export function ChatKitPanel({
   theme,
@@ -45,45 +45,44 @@ export function ChatKitPanel({
   onResponseEnd,
   onThemeRequest
 }: ChatKitPanelProps) {
-  
   const containerRef = useRef<HTMLDivElement | null>(null);
+
   const [error, setError] = useState<ErrorState>({
     script: null,
     session: null,
     integration: null
   });
 
-  // Custom session creation with persistence
+  // ------------------------------
+  // CREATE / RESTORE SESSION LOGIC
+  // ------------------------------
   const createSessionWithPersistence = useCallback(async () => {
-    // Try to get existing session from localStorage
-    const savedSession = typeof window !== 'undefined' 
-      ? localStorage.getItem(SESSION_KEY) 
-      : null;
+    const savedSession =
+      typeof window !== "undefined"
+        ? localStorage.getItem(SESSION_KEY)
+        : null;
 
     try {
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json"
       };
 
-      // If we have a saved session, try to resume it
       if (savedSession) {
-        headers['x-session-id'] = savedSession;
-        console.log('🔄 Attempting to resume chat session');
+        headers["x-session-id"] = savedSession;
+        console.log("🔄 Attempting to resume chat session");
       } else {
-        console.log('🆕 Creating new chat session');
+        console.log("🆕 Creating new chat session");
       }
 
       const response = await fetch(CREATE_SESSION_ENDPOINT, {
-        method: 'POST',
+        method: "POST",
         headers,
         body: JSON.stringify({
           workflow: { id: WORKFLOW_ID },
           chatkit_configuration: {
-            file_upload: {
-              enabled: true,
-            },
-          },
-        }),
+            file_upload: { enabled: true }
+          }
+        })
       });
 
       if (!response.ok) {
@@ -93,45 +92,51 @@ export function ChatKitPanel({
       const data = await response.json();
       const sessionId = data.client_secret;
 
-      // Save session to localStorage
-      if (sessionId && typeof window !== 'undefined') {
+      if (sessionId && typeof window !== "undefined") {
         localStorage.setItem(SESSION_KEY, sessionId);
-        console.log('💾 Chat session saved');
+        console.log("💾 Chat session saved");
       }
 
       return sessionId;
     } catch (err) {
-      console.error('Session creation error:', err);
-      // If resume fails, clear storage and try creating new session
-      if (savedSession && typeof window !== 'undefined') {
+      console.error("Session creation error:", err);
+
+      if (savedSession && typeof window !== "undefined") {
         localStorage.removeItem(SESSION_KEY);
-        console.log('❌ Session resume failed, starting fresh');
+        console.log("❌ Session resume failed — starting fresh");
         return createSessionWithPersistence();
       }
+
       throw err;
     }
   }, []);
 
-  // Remove top spacing
+  // ------------------------------
+  // REMOVE TOP SPACING FROM CHATKIT
+  // ------------------------------
   useEffect(() => {
-    if (containerRef.current) {
-      const container = containerRef.current;
-      container.style.marginTop = "0px";
-      container.style.paddingTop = "0px";
-      
-      setTimeout(() => {
-        const internal = container.querySelector("openai-chatkit");
-        if (internal) {
-          (internal as HTMLElement).style.marginTop = "0px";
-          (internal as HTMLElement).style.paddingTop = "0px";
-        }
-      }, 50);
-    }
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+
+    container.style.marginTop = "0px";
+    container.style.paddingTop = "0px";
+
+    setTimeout(() => {
+      const internal = container.querySelector("openai-chatkit");
+      if (internal) {
+        (internal as HTMLElement).style.marginTop = "0px";
+        (internal as HTMLElement).style.paddingTop = "0px";
+      }
+    }, 50);
   }, []);
 
+  // ------------------------------
+  // CALLBACK HANDLERS
+  // ------------------------------
   const handleFactAction = useCallback(
     async (payload: { action?: FactAction }) => {
       if (!payload?.action) return;
+
       if (payload.action.type === "save") {
         await onWidgetAction(payload.action);
       }
@@ -141,7 +146,7 @@ export function ChatKitPanel({
 
   const handleThemeChange = useCallback(
     (payload: { scheme?: ColorScheme }) => {
-      if (payload?.scheme) {
+      if (payload.scheme) {
         onThemeRequest(payload.scheme);
       }
     },
@@ -154,17 +159,35 @@ export function ChatKitPanel({
 
   const handleError = useCallback(
     (payload: { type?: string; error?: string }) => {
-      if (payload.type === "script_error") {
-        setError((prev) => ({ ...prev, script: payload.error || null }));
-      } else if (payload.type === "session_error") {
-        setError((prev) => ({ ...prev, session: payload.error || null }));
-      } else if (payload.type === "integration_error") {
-        setError((prev) => ({ ...prev, integration: payload.error || null }));
-      }
+      setError(prev => {
+        if (payload.type === "script_error") {
+          return { ...prev, script: payload.error || null };
+        }
+        if (payload.type === "session_error") {
+          return { ...prev, session: payload.error || null };
+        }
+        if (payload.type === "integration_error") {
+          return { ...prev, integration: payload.error || null };
+        }
+        return prev;
+      });
     },
     []
   );
 
+  // ------------------------------
+  // MERGE ALL ERRORS INTO ONE MESSAGE
+  // (Fixes Vercel type failure)
+  // ------------------------------
+  const mergedErrorMessage =
+    error.script ||
+    error.session ||
+    error.integration ||
+    null;
+
+  // ------------------------------
+  // RENDER
+  // ------------------------------
   return (
     <div
       ref={containerRef}
@@ -176,13 +199,10 @@ export function ChatKitPanel({
         padding: 0
       }}
     >
-      {error.script || error.session || error.integration ? (
-        <ErrorOverlay
-          script={error.script}
-          session={error.session}
-          integration={error.integration}
-        />
+      {mergedErrorMessage ? (
+        <ErrorOverlay message={mergedErrorMessage} />
       ) : null}
+
       <ChatKit
         workflow={WORKFLOW_ID}
         theme={getThemeConfig(theme)}
