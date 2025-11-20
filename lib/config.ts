@@ -48,21 +48,4 @@ export const getThemeConfig = (theme: ColorScheme): ThemeOption => ({
     },
   },
   radius: "round",
-  typography: {
-    fontSize: {
-      base: 13,
-      scale: 1.05,
-    },
-    lineHeight: {
-      base: 1.4,
-    },
-  },
-  spacing: {
-    scale: 0.5,
-    containerPadding: 8,
-    messagePadding: 8,
-  },
-  layout: {
-    compactMode: true,
-  },
 });
