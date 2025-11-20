@@ -53,7 +53,7 @@ export function ChatKitPanel({
   const [errors, setErrors] = useState<ErrorState>(() => createInitialErrors());
   const [isInitializingSession, setIsInitializingSession] = useState(true);
   const isMountedRef = useRef(true);
-  const [scriptStatus, setScriptStatus] = useState
+  const [scriptStatus, setScriptStatus] = useState<
     "pending" | "ready" | "error"
   >(() =>
     isBrowser && window.customElements?.get("openai-chatkit")
