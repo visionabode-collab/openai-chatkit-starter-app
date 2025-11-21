@@ -15,6 +15,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* FIXED: Clipboard permissions for ChatKit */}
+        <meta
+          httpEquiv="Permissions-Policy"
+          content="clipboard-read=*, clipboard-write=*"
+        />
+
         <Script
           src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js"
           strategy="beforeInteractive"
