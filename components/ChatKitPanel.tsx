@@ -15,8 +15,6 @@ interface ChatKitPanelProps {
 }
 
 export default function ChatKitPanel({
-  apiKey,
-  assistantId,
   threadId,
   onThreadIdChange,
   onClose,
@@ -37,11 +35,11 @@ export default function ChatKitPanel({
         return client_secret;
       },
     },
-    onThreadCreate: (thread: any) => {
-      console.log("Thread created:", thread.id);
-      onThreadIdChange(thread.id);
+    onThreadChange: ({ threadId: newThreadId }: { threadId: string }) => {
+      console.log("Thread changed:", newThreadId);
+      onThreadIdChange(newThreadId);
       try {
-        localStorage.setItem("chatThreadId", thread.id);
+        localStorage.setItem("chatThreadId", newThreadId);
       } catch (e) {
         console.warn("Failed to save thread ID:", e);
       }
