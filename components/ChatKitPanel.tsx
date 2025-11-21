@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, Component, ErrorInfo, ReactNode } from 'react';
-import { ChatKit, type ChatKitOptions } from '@openai/chatkit-react';   // ✅ FIXED PACKAGE NAME
+import { ChatKit, type ChatKitOptions } from '@openai/chatkit-react';   // ✔ Correct package
 import type { AssistantStreamEvent } from 'openai/resources/beta/assistants';
-import '@openai/chatkit-react/dist/index.css';                          // ✅ FIXED CSS IMPORT
-import './ChatKitPanel.css';
+import './ChatKitPanel.css';                                              // ✔ Keep only this
 
 // Error Boundary Component
 class ChatKitErrorBoundary extends Component<
@@ -25,13 +24,14 @@ class ChatKitErrorBoundary extends Component<
 
   render() {
     if (this.state.hasError) {
-      setTimeout(() => this.setState({ hasError: false }), 100);
+      setTimeout(() => this.setState({ hasError: false }), 120);
       return null;
     }
     return this.props.children;
   }
 }
 
+// Props
 interface ChatKitPanelProps {
   apiKey: string;
   assistantId: string;
@@ -59,7 +59,8 @@ export default function ChatKitPanel({
   // Build greeting text
   const buildGreeting = () => {
     const hour = new Date().getHours();
-    let prefix =
+
+    const prefix =
       hour <= 11 ? "Good Morning" :
       hour <= 17 ? "Good Afternoon" :
       "Good Evening";
@@ -67,7 +68,7 @@ export default function ChatKitPanel({
     return `${prefix}, welcome to the official website of WESCU. Here, a world of possibilities awaits you. We are committed to ensuring that your life is enriched with holistic prosperity, hope, and purpose. Whether you're exploring financial solutions, seeking guidance, or learning about our services, know that you are valued every step of the way. How may I assist you today?`;
   };
 
-  // Run greeting only once per open
+  // Run greeting once when audio is enabled
   useEffect(() => {
     const msg = buildGreeting();
     setGreeting(msg);
@@ -78,6 +79,7 @@ export default function ChatKitPanel({
     }
   }, [isAudioEnabled]);
 
+  // ChatKit options
   const chatOptions: ChatKitOptions = {
     apiKey,
     assistantId,
@@ -107,6 +109,8 @@ export default function ChatKitPanel({
 
   return (
     <div className="chat-panel">
+
+      {/* HEADER */}
       <div className="chat-header">
         <img
           src="https://cdn.prod.website-files.com/6767f7b80cd69e3a62efb5e1/6767f7b80cd69e3a62efb6f1_wescu-fav-logo%20(1).png"
@@ -119,7 +123,10 @@ export default function ChatKitPanel({
           <p>WESCU Virtual Assistant</p>
         </div>
 
-        <button className={`audio-toggle-btn ${isAudioEnabled ? "active" : ""}`} onClick={onAudioToggle}>
+        <button
+          className={`audio-toggle-btn ${isAudioEnabled ? "active" : ""}`}
+          onClick={onAudioToggle}
+        >
           <i className={`fas ${isAudioEnabled ? "fa-volume-up" : "fa-volume-mute"}`}></i>
         </button>
 
@@ -128,6 +135,7 @@ export default function ChatKitPanel({
         </button>
       </div>
 
+      {/* BODY */}
       <div className="chat-body">
         <ChatKitErrorBoundary onError={() => setErrorCount(n => n + 1)}>
           <ChatKit options={chatOptions} />
