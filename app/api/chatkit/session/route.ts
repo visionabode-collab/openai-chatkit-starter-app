@@ -49,27 +49,18 @@ export async function POST(): Promise<Response> {
       );
     }
 
-    // ------- 🔥 CRITICAL FIX HERE -------
-    const secret = json?.session?.client_secret;
+    // ✅ ChatKit expects ONLY the string — not the object.
+    const secret = json?.session?.client_secret?.value;
     if (!secret) {
-      console.error("Missing client_secret in upstream response:", json);
       return NextResponse.json(
-        { error: "Missing client_secret from upstream" },
+        { error: "Upstream missing valid client_secret.value" },
         { status: 500 }
       );
     }
 
-    // ChatKit expects this EXACT structure:
-    const formatted = {
-      client_secret: {
-        value: secret.value,
-        id: secret.id,
-        expires_at: secret.expires_at
-      }
-    };
-
-    return NextResponse.json(formatted);
-    // ------- END FIX -------
+    return NextResponse.json({
+      client_secret: secret
+    });
 
   } catch (err) {
     console.error("Session route error:", err);
