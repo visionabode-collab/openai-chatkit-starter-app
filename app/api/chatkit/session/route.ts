@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = "edge";
+// Standard Node.js runtime (More stable for env vars)
+// removed "export const runtime = 'edge'"
 
 const DEFAULT_CHATKIT_BASE = "https://api.openai.com";
 
 export async function POST(req: NextRequest): Promise<Response> {
   try {
-    // 1. Parse the incoming body from the frontend to get the 'user'
-    // (This was missing in the old code!)
-    const body = await req.json();
-    const { user } = body;
+    // 1. Get the user object from the frontend
+    let user = { id: "guest_fallback", name: "Website Visitor" };
+    try {
+      const body = await req.json();
+      if (body.user) user = body.user;
+    } catch (e) {
+      console.log("No body sent, using fallback user");
+    }
 
     const openaiApiKey = process.env.OPENAI_API_KEY;
     if (!openaiApiKey) {
@@ -22,7 +27,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     const workflowId = process.env.OPENAI_ASSISTANT_ID || process.env.NEXT_PUBLIC_ASSISTANT_ID;
     if (!workflowId) {
       return NextResponse.json(
-        { error: "Missing workflow ID (Assistant ID)" },
+        { error: "Missing workflow ID" },
         { status: 400 }
       );
     }
@@ -38,12 +43,11 @@ export async function POST(req: NextRequest): Promise<Response> {
       },
       body: JSON.stringify({
         workflow: { id: workflowId },
-        // 2. Pass the user object through to OpenAI
-        // (This fixes the 400 error)
-        user: user || { 
-            id: "guest_default", 
-            name: "Website Visitor" 
-        },
+        
+        // ✅ THE FIX: Send ONLY the ID string. 
+        // The error happened because we were sending the whole object 'user'.
+        user: user.id || "guest_fallback", 
+        
         chatkit_configuration: {
           file_upload: { enabled: false },
         },
@@ -54,10 +58,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     if (!upstreamResponse.ok) {
       console.error("OpenAI API error:", json);
-      return NextResponse.json(
-        { error: json.error?.message ?? "Failed to create session" },
-        { status: upstreamResponse.status }
-      );
+      return NextResponse.json(json, { status: upstreamResponse.status });
     }
 
     return NextResponse.json(json);
