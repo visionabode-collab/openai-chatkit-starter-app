@@ -18,6 +18,7 @@ interface ChatKitPanelProps {
 export default function ChatKitPanel({
   threadId,
   onThreadIdChange,
+  // We don't even need these props anymore for UI, but keep them to prevent errors
   onClose,
   isAudioEnabled,
   onAudioToggle,
@@ -33,7 +34,7 @@ export default function ChatKitPanel({
         const res = await fetch("/api/chatkit/session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          // ✅ FIX: Send the 'user' parameter so the server knows who is chatting
+          // Pass the user info
           body: JSON.stringify({ 
             user: { 
               id: guestId,
@@ -44,8 +45,7 @@ export default function ChatKitPanel({
 
         const data = await res.json();
 
-        // ✅ FIX: Return the OBJECT (for the app to work)
-        // but cast as string (to satisfy the build)
+        // Return the Object cast as string (Our established fix)
         return {
           type: "client_secret",
           value: data.client_secret,
@@ -73,39 +73,15 @@ export default function ChatKitPanel({
     }
   }, [threadId, setThreadId]);
 
-  useEffect(() => {
-    if (isAudioEnabled && !played.current) {
-      played.current = true;
-      console.log("Greeting audio placeholder");
-    }
-  }, [isAudioEnabled]);
-
   return (
-    <div className="chat-panel">
-      <div className="chat-header">
-        <img
-          src="https://cdn.prod.website-files.com/6767f7b80cd69e3a62efb5e1/6767f7b80cd69e3a62efb6f1_wescu-fav-logo%20(1).png"
-          alt="Claire"
-          className="chat-avatar"
-        />
-        <div className="chat-info">
-          <h3>Claire</h3>
-          <p>WESCU Virtual Assistant</p>
-        </div>
+    <div className="chat-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      
+      {/* ❌ DELETED THE HEADER SECTION
+         No more Image, No more "Claire" text, No more Close button.
+         The Website Wrapper handles all of that.
+      */}
 
-        <button
-          className={`audio-toggle-btn ${isAudioEnabled ? "active" : ""}`}
-          onClick={onAudioToggle}
-        >
-          {isAudioEnabled ? "🔊" : "🔇"}
-        </button>
-
-        <button className="close-btn" onClick={onClose}>
-          ✖
-        </button>
-      </div>
-
-      <div className="chat-body">
+      <div className="chat-body" style={{ flex: 1, overflow: 'hidden' }}>
         <ChatKit control={control} />
       </div>
     </div>
