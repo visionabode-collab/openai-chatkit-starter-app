@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @next/next/no-img-element */
 "use client";
+
 import { useEffect, useRef } from "react";
 import { ChatKit, useChatKit } from "@openai/chatkit-react";
 
@@ -23,7 +24,7 @@ export default function ChatKitPanel({
 }: ChatKitPanelProps) {
   const played = useRef(false);
 
-  // Use the NEW ChatKit API with useChatKit hook
+  // ✅ FIXED ChatKit hook — correct return format for client_secret
   const { control, setThreadId } = useChatKit({
     api: {
       async getClientSecret() {
@@ -31,14 +32,22 @@ export default function ChatKitPanel({
           method: "POST",
           headers: { "Content-Type": "application/json" },
         });
-        const { client_secret } = await res.json();
-        return client_secret;
+
+        const data = await res.json();
+
+        // 👇👇 REQUIRED FORMAT — this fixes "Invalid client secret format"
+        return {
+          type: "client_secret",
+          value: data.client_secret,
+        };
       },
     },
+
     onThreadChange: ({ threadId: newThreadId }: { threadId: string | null }) => {
       if (newThreadId) {
         console.log("Thread changed:", newThreadId);
         onThreadIdChange(newThreadId);
+
         try {
           localStorage.setItem("chatThreadId", newThreadId);
         } catch (e) {
@@ -57,7 +66,7 @@ export default function ChatKitPanel({
     }
   }, [threadId, setThreadId]);
 
-  // Audio greeting logic
+  // Audio greeting logic placeholder
   useEffect(() => {
     if (isAudioEnabled && !played.current) {
       played.current = true;
@@ -67,36 +76,4 @@ export default function ChatKitPanel({
 
   return (
     <div className="chat-panel">
-      {/* HEADER */}
-      <div className="chat-header">
-        <img
-          src="https://cdn.prod.website-files.com/6767f7b80cd69e3a62efb5e1/6767f7b80cd69e3a62efb6f1_wescu-fav-logo%20(1).png"
-          alt="Claire"
-          className="chat-avatar"
-        />
-        <div className="chat-info">
-          <h3>Claire</h3>
-          <p>WESCU Virtual Assistant</p>
-        </div>
-        <button
-          className={`audio-toggle-btn ${isAudioEnabled ? "active" : ""}`}
-          onClick={onAudioToggle}
-        >
-          <i
-            className={`fas ${
-              isAudioEnabled ? "fa-volume-up" : "fa-volume-mute"
-            }`}
-          />
-        </button>
-        <button className="close-btn" onClick={onClose}>
-          <i className="fas fa-times" />
-        </button>
-      </div>
-
-      {/* BODY */}
-      <div className="chat-body">
-        <ChatKit control={control} className="h-full w-full" />
-      </div>
-    </div>
-  );
-}
+      {
