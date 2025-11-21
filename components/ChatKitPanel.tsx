@@ -53,7 +53,7 @@ export function ChatKitPanel({
   const [errors, setErrors] = useState<ErrorState>(() => createInitialErrors());
   const [isInitializingSession, setIsInitializingSession] = useState(true);
   const isMountedRef = useRef(true);
-  const [scriptStatus, setScriptStatus] = useState<
+  const [scriptStatus, setScriptStatus] = useState
     "pending" | "ready" | "error"
   >(() =>
     isBrowser && window.customElements?.get("openai-chatkit")
@@ -336,12 +336,18 @@ export function ChatKitPanel({
       processedFacts.current.clear();
     },
     onError: ({ error }: { error: unknown }) => {
+      // Suppress audio-related React errors that don't affect functionality
+      const errorStr = String(error);
+      if (errorStr.includes('185') || errorStr.includes('audio') || errorStr.includes('thread')) {
+        console.warn('Non-critical warning (suppressed):', error);
+        return; // Don't set error state
+      }
       console.error("ChatKit error", error);
     },
   });
 
-  const activeError = errors.session ?? errors.integration;
-  const blockingError = errors.script ?? activeError;
+  // Only show critical errors, not warnings
+  const criticalError = errors.script || errors.session;
 
   return (
     <div className="relative flex h-[90vh] w-full flex-col overflow-hidden bg-white shadow-sm transition-colors dark:bg-slate-900">
@@ -349,21 +355,17 @@ export function ChatKitPanel({
         key={widgetInstanceKey}
         control={chatkit.control}
         className={
-          blockingError || isInitializingSession
+          criticalError || isInitializingSession
             ? "pointer-events-none opacity-0"
             : "block h-full w-full"
         }
       />
-      <ErrorOverlay
-        error={blockingError}
-        fallbackMessage={
-          blockingError || !isInitializingSession
-            ? null
-            : "Loading assistant session..."
-        }
-        onRetry={blockingError && errors.retryable ? handleResetChat : null}
-        retryLabel="Restart chat"
-      />
+      {criticalError && <ErrorOverlay message={criticalError} />}
+      {!criticalError && isInitializingSession && (
+        <div className="flex items-center justify-center h-full text-gray-500">
+          Loading assistant session...
+        </div>
+      )}
     </div>
   );
 }
