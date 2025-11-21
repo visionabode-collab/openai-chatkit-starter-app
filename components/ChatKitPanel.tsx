@@ -11,7 +11,7 @@ import {
   ReactNode,
 } from "react";
 
-import { ChatKit, type ChatKitOptions } from "@openai/chatkit-react";
+import { ChatKit } from "@openai/chatkit-react";
 
 // --------------------------------------------------------------
 // ERROR BOUNDARY
@@ -93,38 +93,6 @@ export default function ChatKitPanel({
     }
   }, [isAudioEnabled]);
 
-  // --------------------------------------------------------------
-  // CHATKIT OPTIONS (NEW API FORMAT)
-  // --------------------------------------------------------------
-  const options: ChatKitOptions = {
-    apiKey,
-    assistantId,
-    threadId: threadId ?? undefined,
-    greeting,
-
-    onError: ({ error }) => {
-      console.warn("ChatKit suppressed error:", error);
-    },
-
-    onThreadEvent: (event: any) => {
-      try {
-        if (event?.event === "thread.created" && event?.data?.id) {
-          const id = event.data.id;
-          onThreadIdChange(id);
-          localStorage.setItem("chatThreadId", id);
-        }
-      } catch (err) {
-        console.warn("Thread event suppressed:", err);
-      }
-    },
-
-    onStateChange: (state: any) => {
-      if (state?.error) {
-        console.warn("ChatKit state error suppressed:", state.error);
-      }
-    },
-  };
-
   return (
     <div className="chat-panel">
       {/* HEADER */}
@@ -158,8 +126,34 @@ export default function ChatKitPanel({
 
       {/* BODY */}
       <div className="chat-body">
-        <ChatKitErrorBoundary onError={() => console.warn("Boundary triggered")}>
-          <ChatKit options={options} />
+        <ChatKitErrorBoundary
+          onError={() => console.warn("Boundary triggered")}
+        >
+          <ChatKit
+            apiKey={apiKey}
+            assistantId={assistantId}
+            threadId={threadId ?? undefined}
+            greeting={greeting}
+            onError={({ error }) =>
+              console.warn("ChatKit suppressed error:", error)
+            }
+            onThreadEvent={(event: any) => {
+              try {
+                if (event?.event === "thread.created" && event?.data?.id) {
+                  const id = event.data.id;
+                  onThreadIdChange(id);
+                  localStorage.setItem("chatThreadId", id);
+                }
+              } catch (err) {
+                console.warn("Thread event suppressed:", err);
+              }
+            }}
+            onStateChange={(state: any) => {
+              if (state?.error) {
+                console.warn("ChatKit state error suppressed:", state.error);
+              }
+            }}
+          />
         </ChatKitErrorBoundary>
       </div>
     </div>
