@@ -47,8 +47,8 @@ class ChatKitErrorBoundary extends Component<
    PROPS
 ------------------------------------------------------- */
 interface ChatKitPanelProps {
-  apiKey: string;        // ← kept for your audio logic, NOT used by ChatKit
-  assistantId: string;   // ← same, not passed to ChatKit
+  apiKey: string;        // ← safe to ignore
+  assistantId: string;   // ← safe to ignore
   threadId: string | null;
   onThreadIdChange: (threadId: string) => void;
   onClose: () => void;
@@ -68,31 +68,20 @@ export default function ChatKitPanel({
   isAudioEnabled,
   onAudioToggle,
 }: ChatKitPanelProps) {
-  const [greeting, setGreeting] = useState("");
+
+  // Used only for your audio UI state
   const played = useRef(false);
 
-  const buildGreeting = () => {
-    const hour = new Date().getHours();
-    const prefix =
-      hour <= 11
-        ? "Good Morning"
-        : hour <= 17
-        ? "Good Afternoon"
-        : "Good Evening";
-
-    return `${prefix}, welcome to WESCU. How may I assist you today?`;
-  };
-
   useEffect(() => {
-    setGreeting(buildGreeting());
     if (isAudioEnabled && !played.current) {
       played.current = true;
-      console.log("Greeting triggered");
+      console.log("Greeting would trigger here (text only)");
     }
   }, [isAudioEnabled]);
 
   return (
     <div className="chat-panel">
+      
       {/* HEADER */}
       <div className="chat-header">
         <img
@@ -120,9 +109,8 @@ export default function ChatKitPanel({
 
       {/* BODY */}
       <div className="chat-body">
-        <ChatKitErrorBoundary onError={() => console.warn("Boundary triggered")}>
+        <ChatKitErrorBoundary>
           <ChatKit
-            greeting={greeting}
             threadId={threadId ?? undefined}
             onThreadEvent={(event: any) => {
               try {
