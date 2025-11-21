@@ -34,8 +34,12 @@ export default function ChatKitPanel({
 
         const data = await res.json();
 
-        // ✅ FIX: return ONLY the string, NOT an object
-        return data.client_secret;
+        // ✅ GENUINE FIX: ChatKit SDK requires this specific object format.
+        // Returning just a string will crash the app.
+        return {
+          type: "client_secret",
+          value: data.client_secret,
+        };
       },
     },
 
