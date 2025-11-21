@@ -34,10 +34,8 @@ export default function ChatKitPanel({
 
         const data = await res.json();
 
-        return {
-          type: "client_secret",
-          value: data.client_secret,
-        };
+        // ✅ FIX: return ONLY the string, NOT an object
+        return data.client_secret;
       },
     },
 
