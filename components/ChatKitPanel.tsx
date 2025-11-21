@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, Component, ErrorInfo, ReactNode } from 'react';
-import { ChatKit, type ChatKitOptions } from '@openai/chatkit-react';   // ✔ Correct package
+import { ChatKit, type ChatKitOptions } from '@openai/chatkit-react';
 import type { AssistantStreamEvent } from 'openai/resources/beta/assistants';
-import './ChatKitPanel.css';                                              // ✔ Keep only this
 
 // Error Boundary Component
 class ChatKitErrorBoundary extends Component<
@@ -31,7 +30,6 @@ class ChatKitErrorBoundary extends Component<
   }
 }
 
-// Props
 interface ChatKitPanelProps {
   apiKey: string;
   assistantId: string;
@@ -56,7 +54,7 @@ export default function ChatKitPanel({
   const greetingPlayed = useRef(false);
   const [errorCount, setErrorCount] = useState(0);
 
-  // Build greeting text
+  // Time-based greeting logic
   const buildGreeting = () => {
     const hour = new Date().getHours();
 
@@ -68,7 +66,6 @@ export default function ChatKitPanel({
     return `${prefix}, welcome to the official website of WESCU. Here, a world of possibilities awaits you. We are committed to ensuring that your life is enriched with holistic prosperity, hope, and purpose. Whether you're exploring financial solutions, seeking guidance, or learning about our services, know that you are valued every step of the way. How may I assist you today?`;
   };
 
-  // Run greeting once when audio is enabled
   useEffect(() => {
     const msg = buildGreeting();
     setGreeting(msg);
@@ -79,7 +76,6 @@ export default function ChatKitPanel({
     }
   }, [isAudioEnabled]);
 
-  // ChatKit options
   const chatOptions: ChatKitOptions = {
     apiKey,
     assistantId,
