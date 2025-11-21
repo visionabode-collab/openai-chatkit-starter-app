@@ -47,8 +47,8 @@ class ChatKitErrorBoundary extends Component<
    PROPS
 ------------------------------------------------------- */
 interface ChatKitPanelProps {
-  apiKey: string;
-  assistantId: string;
+  apiKey: string;        // ← kept for your audio logic, NOT used by ChatKit
+  assistantId: string;   // ← same, not passed to ChatKit
   threadId: string | null;
   onThreadIdChange: (threadId: string) => void;
   onClose: () => void;
@@ -122,8 +122,6 @@ export default function ChatKitPanel({
       <div className="chat-body">
         <ChatKitErrorBoundary onError={() => console.warn("Boundary triggered")}>
           <ChatKit
-            apiKey={apiKey}
-            assistantId={assistantId}
             greeting={greeting}
             threadId={threadId ?? undefined}
             onThreadEvent={(event: any) => {
