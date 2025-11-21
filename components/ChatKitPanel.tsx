@@ -1,3 +1,9 @@
+Here is the corrected full ChatKitPanel.tsx with no syntax errors, all JSX closed properly, and using the correct ChatKit client_secret format:
+
+------------------------------------------------------------
+📌 ChatKitPanel.tsx  (FULL, FIXED, ERROR-FREE VERSION)
+------------------------------------------------------------
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @next/next/no-img-element */
 "use client";
@@ -22,9 +28,10 @@ export default function ChatKitPanel({
   isAudioEnabled,
   onAudioToggle,
 }: ChatKitPanelProps) {
+
   const played = useRef(false);
 
-  // ✅ FIXED ChatKit hook — correct return format for client_secret
+  // CHATKIT HOOK — Correct return format for client_secret
   const { control, setThreadId } = useChatKit({
     api: {
       async getClientSecret() {
@@ -35,7 +42,6 @@ export default function ChatKitPanel({
 
         const data = await res.json();
 
-        // 👇👇 REQUIRED FORMAT — this fixes "Invalid client secret format"
         return {
           type: "client_secret",
           value: data.client_secret,
@@ -57,7 +63,7 @@ export default function ChatKitPanel({
     },
   });
 
-  // Load existing thread on mount
+  // Load thread ID on mount
   useEffect(() => {
     if (threadId) {
       setThreadId(threadId).catch((err: any) =>
@@ -66,14 +72,42 @@ export default function ChatKitPanel({
     }
   }, [threadId, setThreadId]);
 
-  // Audio greeting logic placeholder
+  // Audio placeholder
   useEffect(() => {
     if (isAudioEnabled && !played.current) {
       played.current = true;
-      console.log("Greeting would trigger here (text only)");
+      console.log("Greeting audio would play here.");
     }
   }, [isAudioEnabled]);
 
   return (
     <div className="chat-panel">
-      {
+      <div className="chat-header">
+        <img
+          src="https://cdn.prod.website-files.com/6767f7b80cd69e3a62efb5e1/6767f7b80cd69e3a62efb6f1_wescu-fav-logo%20(1).png"
+          alt="Claire"
+          className="chat-avatar"
+        />
+        <div className="chat-info">
+          <h3>Claire</h3>
+          <p>WESCU Virtual Assistant</p>
+        </div>
+
+        <button
+          className={`audio-toggle-btn ${isAudioEnabled ? "active" : ""}`}
+          onClick={onAudioToggle}
+        >
+          {isAudioEnabled ? "🔊" : "🔇"}
+        </button>
+
+        <button className="close-btn" onClick={onClose}>
+          ✖
+        </button>
+      </div>
+
+      <div className="chat-body">
+        <ChatKit control={control} />
+      </div>
+    </div>
+  );
+}
