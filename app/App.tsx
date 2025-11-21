@@ -1,15 +1,15 @@
 "use client";
 
 import { useCallback } from "react";
-import ChatKitPanel, { type FactAction } from "@/components/ChatKitPanel";
+import ChatKitPanel from "@/components/ChatKitPanel";
 import { useColorScheme } from "@/hooks/useColorScheme";
 
 export default function App() {
   const { scheme, setScheme } = useColorScheme();
 
-  const handleWidgetAction = useCallback(async (action: FactAction) => {
+  const handleWidgetAction = useCallback(async () => {
     if (process.env.NODE_ENV !== "production") {
-      console.info("[ChatKitPanel] widget action", action);
+      console.info("[ChatKitPanel] widget action triggered");
     }
   }, []);
 
