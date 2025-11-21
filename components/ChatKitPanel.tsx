@@ -1,54 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @next/next/no-img-element */
 "use client";
+import { useEffect, useRef } from "react";
+import { ChatKit, useChatKit } from "@openai/chatkit-react";
 
-import {
-  useState,
-  useEffect,
-  useRef,
-  Component,
-  ErrorInfo,
-  ReactNode,
-} from "react";
-
-import { ChatKit } from "@openai/chatkit-react";
-
-/* -------------------------------------------------------
-   ERROR BOUNDARY
-------------------------------------------------------- */
-class ChatKitErrorBoundary extends Component<
-  { children: ReactNode; onError?: () => void },
-  { hasError: boolean }
-> {
-  constructor(props: { children: ReactNode; onError?: () => void }) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(_: Error) {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    console.warn("ChatKit ErrorBoundary caught:", error, info);
-    this.props.onError?.();
-  }
-
-  render() {
-    if (this.state.hasError) {
-      setTimeout(() => this.setState({ hasError: false }), 120);
-      return null;
-    }
-    return this.props.children;
-  }
-}
-
-/* -------------------------------------------------------
-   PROPS
-------------------------------------------------------- */
 interface ChatKitPanelProps {
-  apiKey: string;        // ← safe to ignore
-  assistantId: string;   // ← safe to ignore
+  apiKey: string;
+  assistantId: string;
   threadId: string | null;
   onThreadIdChange: (threadId: string) => void;
   onClose: () => void;
@@ -56,9 +14,6 @@ interface ChatKitPanelProps {
   onAudioToggle: () => void;
 }
 
-/* -------------------------------------------------------
-   MAIN COMPONENT
-------------------------------------------------------- */
 export default function ChatKitPanel({
   apiKey,
   assistantId,
@@ -68,10 +23,41 @@ export default function ChatKitPanel({
   isAudioEnabled,
   onAudioToggle,
 }: ChatKitPanelProps) {
-
-  // Used only for your audio UI state
   const played = useRef(false);
 
+  // Use the NEW ChatKit API with useChatKit hook
+  const { control, setThreadId } = useChatKit({
+    api: {
+      async getClientSecret() {
+        const res = await fetch("/api/chatkit/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        const { client_secret } = await res.json();
+        return client_secret;
+      },
+    },
+    onThreadCreate: (thread: any) => {
+      console.log("Thread created:", thread.id);
+      onThreadIdChange(thread.id);
+      try {
+        localStorage.setItem("chatThreadId", thread.id);
+      } catch (e) {
+        console.warn("Failed to save thread ID:", e);
+      }
+    },
+  });
+
+  // Load existing thread on mount
+  useEffect(() => {
+    if (threadId) {
+      setThreadId(threadId).catch((err: any) =>
+        console.warn("Failed to set thread:", err)
+      );
+    }
+  }, [threadId, setThreadId]);
+
+  // Audio greeting logic
   useEffect(() => {
     if (isAudioEnabled && !played.current) {
       played.current = true;
@@ -81,7 +67,6 @@ export default function ChatKitPanel({
 
   return (
     <div className="chat-panel">
-      
       {/* HEADER */}
       <div className="chat-header">
         <img
@@ -89,19 +74,20 @@ export default function ChatKitPanel({
           alt="Claire"
           className="chat-avatar"
         />
-
         <div className="chat-info">
           <h3>Claire</h3>
           <p>WESCU Virtual Assistant</p>
         </div>
-
         <button
           className={`audio-toggle-btn ${isAudioEnabled ? "active" : ""}`}
           onClick={onAudioToggle}
         >
-          <i className={`fas ${isAudioEnabled ? "fa-volume-up" : "fa-volume-mute"}`} />
+          <i
+            className={`fas ${
+              isAudioEnabled ? "fa-volume-up" : "fa-volume-mute"
+            }`}
+          />
         </button>
-
         <button className="close-btn" onClick={onClose}>
           <i className="fas fa-times" />
         </button>
@@ -109,30 +95,7 @@ export default function ChatKitPanel({
 
       {/* BODY */}
       <div className="chat-body">
-        <ChatKitErrorBoundary>
-          <ChatKit
-            threadId={threadId ?? undefined}
-            onThreadEvent={(event: any) => {
-              try {
-                if (event?.event === "thread.created" && event?.data?.id) {
-                  const id = event.data.id;
-                  onThreadIdChange(id);
-                  localStorage.setItem("chatThreadId", id);
-                }
-              } catch (err) {
-                console.warn("Thread event suppressed:", err);
-              }
-            }}
-            onStateChange={(state: any) => {
-              if (state?.error) {
-                console.warn("State error suppressed:", state.error);
-              }
-            }}
-            onError={({ error }) => {
-              console.warn("ChatKit error suppressed:", error);
-            }}
-          />
-        </ChatKitErrorBoundary>
+        <ChatKit control={control} className="h-full w-full" />
       </div>
     </div>
   );
