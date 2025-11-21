@@ -1,420 +1,238 @@
-"use client";
+import { useState, useEffect, useRef, Component, ErrorInfo, ReactNode } from 'react';
+import { ChatKit, type ChatKitOptions } from '@openai-assistants/chatkit-react';
+import type { AssistantStreamEvent } from 'openai/resources/beta/assistants';
+import '@openai-assistants/chatkit-react/dist/index.css';
+import './ChatKitPanel.css';
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ChatKit, useChatKit } from "@openai/chatkit-react";
-import {
-  STARTER_PROMPTS,
-  PLACEHOLDER_INPUT,
-  GREETING,
-  CREATE_SESSION_ENDPOINT,
-  WORKFLOW_ID,
-} from "@/lib/config";
-import { ErrorOverlay } from "./ErrorOverlay";
-import type { ColorScheme } from "@/hooks/useColorScheme";
+// Error Boundary Component
+class ChatKitErrorBoundary extends Component<
+  { children: ReactNode; onError?: () => void },
+  { hasError: boolean }
+> {
+  constructor(props: { children: ReactNode; onError?: () => void }) {
+    super(props);
+    this.state = { hasError: false };
+  }
 
-export type FactAction = {
-  type: "save";
-  factId: string;
-  factText: string;
-};
+  static getDerivedStateFromError(_: Error) {
+    return { hasError: true };
+  }
 
-type ChatKitPanelProps = {
-  theme: ColorScheme;
-  onWidgetAction: (action: FactAction) => Promise<void>;
-  onResponseEnd: () => void;
-  onThemeRequest: (scheme: ColorScheme) => void;
-};
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.warn('ChatKit Error Boundary caught error (suppressed):', error, errorInfo);
+    // Call optional error handler
+    this.props.onError?.();
+  }
 
-type ErrorState = {
-  script: string | null;
-  session: string | null;
-  integration: string | null;
-  retryable: boolean;
-};
-
-const SESSION_KEY = "wescu_chat_session_v1";
-const isBrowser = typeof window !== "undefined";
-const isDev = process.env.NODE_ENV !== "production";
-
-const createInitialErrors = (): ErrorState => ({
-  script: null,
-  session: null,
-  integration: null,
-  retryable: false,
-});
-
-export function ChatKitPanel({
-  theme,
-  onWidgetAction,
-  onResponseEnd,
-  onThemeRequest,
-}: ChatKitPanelProps) {
-  const processedFacts = useRef(new Set<string>());
-  const [errors, setErrors] = useState<ErrorState>(() => createInitialErrors());
-  const [isInitializingSession, setIsInitializingSession] = useState(true);
-  const isMountedRef = useRef(true);
-  const [scriptStatus, setScriptStatus] = useState<
-    "pending" | "ready" | "error"
-  >(() =>
-    isBrowser && window.customElements?.get("openai-chatkit")
-      ? "ready"
-      : "pending"
-  );
-  const [widgetInstanceKey, setWidgetInstanceKey] = useState(0);
-
-  const setErrorState = useCallback((updates: Partial<ErrorState>) => {
-    setErrors((current) => ({ ...current, ...updates }));
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isBrowser) {
-      return;
+  render() {
+    if (this.state.hasError) {
+      // Reset error state after a brief delay to allow recovery
+      setTimeout(() => {
+        this.setState({ hasError: false });
+      }, 100);
+      return null; // Don't render anything while recovering
     }
 
-    let timeoutId: number | undefined;
-
-    const handleLoaded = () => {
-      if (!isMountedRef.current) {
-        return;
-      }
-      setScriptStatus("ready");
-      setErrorState({ script: null });
-    };
-
-    const handleError = (event: Event) => {
-      console.error("Failed to load chatkit.js", event);
-      if (!isMountedRef.current) {
-        return;
-      }
-      setScriptStatus("error");
-      const detail = (event as CustomEvent<unknown>)?.detail ?? "unknown error";
-      setErrorState({ script: `Error: ${detail}`, retryable: false });
-      setIsInitializingSession(false);
-    };
-
-    window.addEventListener("chatkit-script-loaded", handleLoaded);
-    window.addEventListener(
-      "chatkit-script-error",
-      handleError as EventListener
-    );
-
-    if (window.customElements?.get("openai-chatkit")) {
-      handleLoaded();
-    } else if (scriptStatus === "pending") {
-      timeoutId = window.setTimeout(() => {
-        if (!window.customElements?.get("openai-chatkit")) {
-          handleError(
-            new CustomEvent("chatkit-script-error", {
-              detail: "ChatKit web component is unavailable.",
-            })
-          );
-        }
-      }, 5000);
-    }
-
-    return () => {
-      window.removeEventListener("chatkit-script-loaded", handleLoaded);
-      window.removeEventListener(
-        "chatkit-script-error",
-        handleError as EventListener
-      );
-      if (timeoutId) {
-        window.clearTimeout(timeoutId);
-      }
-    };
-  }, [scriptStatus, setErrorState]);
-
-  const isWorkflowConfigured = Boolean(
-    WORKFLOW_ID && !WORKFLOW_ID.startsWith("wf_replace")
-  );
-
-  useEffect(() => {
-    if (!isWorkflowConfigured && isMountedRef.current) {
-      setErrorState({
-        session: "Set NEXT_PUBLIC_CHATKIT_WORKFLOW_ID in your .env.local file.",
-        retryable: false,
-      });
-      setIsInitializingSession(false);
-    }
-  }, [isWorkflowConfigured, setErrorState]);
-
-  const handleResetChat = useCallback(() => {
-    processedFacts.current.clear();
-    if (isBrowser) {
-      localStorage.removeItem(SESSION_KEY);
-      setScriptStatus(
-        window.customElements?.get("openai-chatkit") ? "ready" : "pending"
-      );
-    }
-    setIsInitializingSession(true);
-    setErrors(createInitialErrors());
-    setWidgetInstanceKey((prev) => prev + 1);
-  }, []);
-
-  const getClientSecret = useCallback(
-    async (currentSecret: string | null) => {
-      if (isDev) {
-        console.info("[ChatKitPanel] getClientSecret invoked");
-      }
-
-      if (!isWorkflowConfigured) {
-        const detail =
-          "Set NEXT_PUBLIC_CHATKIT_WORKFLOW_ID in your .env.local file.";
-        if (isMountedRef.current) {
-          setErrorState({ session: detail, retryable: false });
-          setIsInitializingSession(false);
-        }
-        throw new Error(detail);
-      }
-
-      // Try to resume existing session
-      const savedSession = isBrowser ? localStorage.getItem(SESSION_KEY) : null;
-
-      if (isMountedRef.current) {
-        if (!currentSecret) {
-          setIsInitializingSession(true);
-        }
-        setErrorState({ session: null, integration: null, retryable: false });
-      }
-
-      try {
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-        };
-
-        if (savedSession) {
-          headers["x-session-id"] = savedSession;
-          console.log("🔄 Attempting to resume chat session");
-        } else {
-          console.log("🆕 Creating new chat session");
-        }
-
-        const response = await fetch(CREATE_SESSION_ENDPOINT, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            workflow: { id: WORKFLOW_ID },
-            chatkit_configuration: {
-              file_upload: { enabled: true },
-            },
-          }),
-        });
-
-        const raw = await response.text();
-        let data: Record<string, unknown> = {};
-        
-        if (raw) {
-          try {
-            data = JSON.parse(raw) as Record<string, unknown>;
-          } catch (parseError) {
-            console.error("Failed to parse create-session response", parseError);
-          }
-        }
-
-        if (!response.ok) {
-          const detail = extractErrorDetail(data, response.statusText);
-          console.error("Create session request failed", {
-            status: response.status,
-            body: data,
-          });
-          
-          // If resume failed, clear storage and try creating new
-          if (savedSession && isBrowser) {
-            localStorage.removeItem(SESSION_KEY);
-            console.log("❌ Session resume failed, starting fresh");
-            return getClientSecret(null);
-          }
-          
-          throw new Error(detail);
-        }
-
-        const clientSecret = data?.client_secret as string | undefined;
-        if (!clientSecret) {
-          throw new Error("Missing client secret in response");
-        }
-
-        // Save session
-        if (isBrowser) {
-          localStorage.setItem(SESSION_KEY, clientSecret);
-          console.log("💾 Chat session saved");
-        }
-
-        if (isMountedRef.current) {
-          setErrorState({ session: null, integration: null });
-        }
-
-        return clientSecret;
-      } catch (error) {
-        console.error("Failed to create ChatKit session", error);
-        const detail =
-          error instanceof Error
-            ? error.message
-            : "Unable to start ChatKit session.";
-        if (isMountedRef.current) {
-          setErrorState({ session: detail, retryable: false });
-        }
-        throw error instanceof Error ? error : new Error(detail);
-      } finally {
-        if (isMountedRef.current && !currentSecret) {
-          setIsInitializingSession(false);
-        }
-      }
-    },
-    [isWorkflowConfigured, setErrorState]
-  );
-
-  const chatkit = useChatKit({
-    api: { getClientSecret },
-    theme: {
-      colorScheme: theme,
-      color: {
-        grayscale: {
-          hue: 220,
-          tint: 6,
-          shade: theme === "dark" ? -1 : -4,
-        },
-        accent: {
-          primary: theme === "dark" ? "#f1f5f9" : "#0f172a",
-          level: 1,
-        },
-      },
-      radius: "round",
-    },
-    startScreen: {
-      greeting: GREETING,
-      prompts: STARTER_PROMPTS,
-    },
-    composer: {
-      placeholder: PLACEHOLDER_INPUT,
-    },
-    threadItemActions: {
-      feedback: false,
-    },
-    onClientTool: async (invocation: {
-      name: string;
-      params: Record<string, unknown>;
-    }) => {
-      if (invocation.name === "switch_theme") {
-        const requested = invocation.params.theme;
-        if (requested === "light" || requested === "dark") {
-          onThemeRequest(requested);
-          return { success: true };
-        }
-        return { success: false };
-      }
-
-      if (invocation.name === "record_fact") {
-        const id = String(invocation.params.fact_id ?? "");
-        const text = String(invocation.params.fact_text ?? "");
-        if (!id || processedFacts.current.has(id)) {
-          return { success: true };
-        }
-        processedFacts.current.add(id);
-        void onWidgetAction({
-          type: "save",
-          factId: id,
-          factText: text.replace(/\s+/g, " ").trim(),
-        });
-        return { success: true };
-      }
-
-      return { success: false };
-    },
-    onResponseEnd: () => {
-      onResponseEnd();
-    },
-    onResponseStart: () => {
-      setErrorState({ integration: null, retryable: false });
-    },
-    onThreadChange: () => {
-      processedFacts.current.clear();
-    },
-    onError: ({ error }: { error: unknown }) => {
-      // Suppress audio-related React errors that don't affect functionality
-      const errorStr = String(error);
-      if (errorStr.includes('185') || errorStr.includes('audio') || errorStr.includes('thread')) {
-        console.warn('Non-critical warning (suppressed):', error);
-        return; // Don't set error state
-      }
-      console.error("ChatKit error", error);
-    },
-  });
-
-  // Only show critical errors, not warnings
-  const criticalError = errors.script || errors.session;
-
-  return (
-    <div className="relative flex h-[90vh] w-full flex-col overflow-hidden bg-white shadow-sm transition-colors dark:bg-slate-900">
-      <ChatKit
-        key={widgetInstanceKey}
-        control={chatkit.control}
-        className={
-          criticalError || isInitializingSession
-            ? "pointer-events-none opacity-0"
-            : "block h-full w-full"
-        }
-      />
-      {criticalError && <ErrorOverlay message={criticalError} />}
-      {!criticalError && isInitializingSession && (
-        <div className="flex items-center justify-center h-full text-gray-500">
-          Loading assistant session...
-        </div>
-      )}
-    </div>
-  );
+    return this.props.children;
+  }
 }
 
-function extractErrorDetail(
-  payload: Record<string, unknown> | undefined,
-  fallback: string
-): string {
-  if (!payload) {
-    return fallback;
-  }
+interface ChatKitPanelProps {
+  apiKey: string;
+  assistantId: string;
+  threadId: string | null;
+  onThreadIdChange: (threadId: string) => void;
+  onClose: () => void;
+  isAudioEnabled: boolean;
+  onAudioToggle: () => void;
+}
 
-  const error = payload.error;
-  if (typeof error === "string") {
-    return error;
-  }
+export default function ChatKitPanel({
+  apiKey,
+  assistantId,
+  threadId,
+  onThreadIdChange,
+  onClose,
+  isAudioEnabled,
+  onAudioToggle,
+}: ChatKitPanelProps) {
+  const [greeting, setGreeting] = useState('');
+  const [isGreetingPlaying, setIsGreetingPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const hasPlayedGreeting = useRef(false);
+  const [errorCount, setErrorCount] = useState(0);
 
-  if (
-    error &&
-    typeof error === "object" &&
-    "message" in error &&
-    typeof (error as { message?: unknown }).message === "string"
-  ) {
-    return (error as { message: string }).message;
-  }
+  useEffect(() => {
+    const greetingText = `Hello! Welcome to Western United Credit Union. I'm Claire, your virtual assistant. I'm here to help you with information about our services, loans, accounts, and more. How can I assist you today?`;
+    setGreeting(greetingText);
 
-  const details = payload.details;
-  if (typeof details === "string") {
-    return details;
-  }
-
-  if (details && typeof details === "object" && "error" in details) {
-    const nestedError = (details as { error?: unknown }).error;
-    if (typeof nestedError === "string") {
-      return nestedError;
+    if (isAudioEnabled && !hasPlayedGreeting.current) {
+      hasPlayedGreeting.current = true;
+      playGreeting(greetingText);
     }
-    if (
-      nestedError &&
-      typeof nestedError === "object" &&
-      "message" in nestedError &&
-      typeof (nestedError as { message?: unknown }).message === "string"
-    ) {
-      return (nestedError as { message: string }).message;
+  }, [isAudioEnabled]);
+
+  const playGreeting = async (text: string) => {
+    try {
+      console.log('Playing greeting... Audio enabled:', isAudioEnabled);
+      
+      if (!isAudioEnabled) {
+        console.log('Audio muted — greeting stopped');
+        return;
+      }
+
+      setIsGreetingPlaying(true);
+
+      const response = await fetch('https://api.elevenlabs.io/v1/text-to-speech/pqHfZKP75CvOlQylNhV4', {
+        method: 'POST',
+        headers: {
+          'Accept': 'audio/mpeg',
+          'xi-api-key': '70b1e4b77a8d8f03f3c14beb39b3d8e0',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text,
+          model_id: 'eleven_monolingual_v1',
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.75,
+          },
+        }),
+      });
+
+      if (!response.ok) throw new Error('TTS request failed');
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        console.log('Greeting finished');
+        setIsGreetingPlaying(false);
+        URL.revokeObjectURL(audioUrl);
+        audioRef.current = null;
+      };
+
+      audio.onerror = () => {
+        console.error('Audio playback error');
+        setIsGreetingPlaying(false);
+        URL.revokeObjectURL(audioUrl);
+        audioRef.current = null;
+      };
+
+      await audio.play();
+      console.log('✅ Greeting playing!');
+    } catch (error) {
+      console.error('Error playing greeting:', error);
+      setIsGreetingPlaying(false);
     }
-  }
+  };
 
-  if (typeof payload.message === "string") {
-    return payload.message;
-  }
+  const handleAudioToggle = () => {
+    if (isGreetingPlaying && audioRef.current) {
+      console.log('🔴 Stopping audio playback...');
+      audioRef.current.pause();
+      audioRef.current = null;
+      setIsGreetingPlaying(false);
+      console.log('Audio muted — greeting stopped');
+    }
+    onAudioToggle();
+  };
 
-  return fallback;
+  const handleErrorBoundary = () => {
+    setErrorCount(prev => prev + 1);
+    // If too many errors, could show a message or reset
+    if (errorCount > 5) {
+      console.error('Too many ChatKit errors, consider refreshing');
+    }
+  };
+
+  const chatoptions: ChatKitOptions = {
+    apiKey,
+    assistantId,
+    threadId: threadId ?? undefined,
+    greeting,
+    
+    // Comprehensive error suppression
+    onError: ({ error }: { error: unknown }) => {
+      console.warn('ChatKit error (suppressed for stability):', error);
+      // Don't throw - just log and continue
+      return;
+    },
+
+    // Handle thread events with error wrapping
+    onThreadEvent: (event: AssistantStreamEvent) => {
+      try {
+        // Wrap event handling in try-catch to prevent crashes
+        if (event.event === 'thread.created' && 'data' in event && event.data?.id) {
+          const newThreadId = event.data.id;
+          console.log('Chat session saved:', newThreadId);
+          onThreadIdChange(newThreadId);
+          
+          // Save to localStorage
+          try {
+            localStorage.setItem('chatThreadId', newThreadId);
+          } catch (e) {
+            console.warn('Failed to save thread ID to localStorage:', e);
+          }
+        }
+      } catch (error) {
+        // Silently catch any errors in event handling
+        console.warn('Error in thread event handler (suppressed):', error);
+      }
+    },
+
+    // Additional safety wrapper for all ChatKit operations
+    onStateChange: (state: any) => {
+      try {
+        // Safely handle state changes
+        if (state.error) {
+          console.warn('ChatKit state error (suppressed):', state.error);
+        }
+      } catch (error) {
+        console.warn('Error in state change handler (suppressed):', error);
+      }
+    },
+  };
+
+  return (
+    <div className="chat-panel">
+      <div className="chat-header">
+        <img 
+          src="https://cdn.prod.website-files.com/6767f7b80cd69e3a62efb5e1/6767f7b80cd69e3a62efb6f1_wescu-fav-logo%20(1).png" 
+          alt="Claire" 
+          className="chat-avatar"
+        />
+        <div className="chat-info">
+          <h3>Claire</h3>
+          <p>WESCU Virtual Assistant</p>
+        </div>
+        
+        <button 
+          className={`audio-toggle-btn ${isAudioEnabled ? 'active' : ''}`}
+          onClick={handleAudioToggle}
+          title={isAudioEnabled ? "Mute Audio" : "Enable Audio"}
+        >
+          <i className={`fas ${isAudioEnabled ? 'fa-volume-up' : 'fa-volume-mute'}`}></i>
+        </button>
+
+        <button className="close-btn" onClick={onClose}>
+          <i className="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div className="chat-body">
+        <ChatKitErrorBoundary onError={handleErrorBoundary}>
+          <ChatKit options={chatoptions} />
+        </ChatKitErrorBoundary>
+      </div>
+    </div>
+  );
 }
