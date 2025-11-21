@@ -11,11 +11,11 @@ import {
   ReactNode,
 } from "react";
 
-import { ChatKit } from "@openai/chatkit-react";
+import { ChatKit, type ChatKitOptions } from "@openai/chatkit-react";
 
-// ----------------------------------------------------------------------
+// --------------------------------------------------------------
 // ERROR BOUNDARY
-// ----------------------------------------------------------------------
+// --------------------------------------------------------------
 class ChatKitErrorBoundary extends Component<
   { children: ReactNode; onError?: () => void },
   { hasError: boolean }
@@ -43,9 +43,9 @@ class ChatKitErrorBoundary extends Component<
   }
 }
 
-// ----------------------------------------------------------------------
+// --------------------------------------------------------------
 // PROPS
-// ----------------------------------------------------------------------
+// --------------------------------------------------------------
 interface ChatKitPanelProps {
   apiKey: string;
   assistantId: string;
@@ -56,9 +56,9 @@ interface ChatKitPanelProps {
   onAudioToggle: () => void;
 }
 
-// ----------------------------------------------------------------------
+// --------------------------------------------------------------
 // MAIN COMPONENT
-// ----------------------------------------------------------------------
+// --------------------------------------------------------------
 export default function ChatKitPanel({
   apiKey,
   assistantId,
@@ -71,6 +71,7 @@ export default function ChatKitPanel({
   const [greeting, setGreeting] = useState("");
   const played = useRef(false);
 
+  // Build dynamic greeting
   const buildGreeting = (): string => {
     const hour = new Date().getHours();
     const prefix =
@@ -88,9 +89,41 @@ export default function ChatKitPanel({
 
     if (isAudioEnabled && !played.current) {
       played.current = true;
-      console.log("Greeting fired");
+      console.log("Greeting triggered");
     }
   }, [isAudioEnabled]);
+
+  // --------------------------------------------------------------
+  // CHATKIT OPTIONS (NEW API FORMAT)
+  // --------------------------------------------------------------
+  const options: ChatKitOptions = {
+    apiKey,
+    assistantId,
+    threadId: threadId ?? undefined,
+    greeting,
+
+    onError: ({ error }) => {
+      console.warn("ChatKit suppressed error:", error);
+    },
+
+    onThreadEvent: (event: any) => {
+      try {
+        if (event?.event === "thread.created" && event?.data?.id) {
+          const id = event.data.id;
+          onThreadIdChange(id);
+          localStorage.setItem("chatThreadId", id);
+        }
+      } catch (err) {
+        console.warn("Thread event suppressed:", err);
+      }
+    },
+
+    onStateChange: (state: any) => {
+      if (state?.error) {
+        console.warn("ChatKit state error suppressed:", state.error);
+      }
+    },
+  };
 
   return (
     <div className="chat-panel">
@@ -111,7 +144,11 @@ export default function ChatKitPanel({
           className={`audio-toggle-btn ${isAudioEnabled ? "active" : ""}`}
           onClick={onAudioToggle}
         >
-          <i className={`fas ${isAudioEnabled ? "fa-volume-up" : "fa-volume-mute"}`} />
+          <i
+            className={`fas ${
+              isAudioEnabled ? "fa-volume-up" : "fa-volume-mute"
+            }`}
+          />
         </button>
 
         <button className="close-btn" onClick={onClose}>
@@ -122,28 +159,7 @@ export default function ChatKitPanel({
       {/* BODY */}
       <div className="chat-body">
         <ChatKitErrorBoundary onError={() => console.warn("Boundary triggered")}>
-          <ChatKit
-            apiKey={apiKey}
-            assistantId={assistantId}
-            threadId={threadId ?? undefined}
-            greeting={greeting}
-            onError={({ error }) => console.warn("ChatKit suppressed error:", error)}
-            onThreadEvent={(event: any) => {
-              try {
-                if (event?.event === "thread.created" && event?.data?.id) {
-                  onThreadIdChange(event.data.id);
-                  localStorage.setItem("chatThreadId", event.data.id);
-                }
-              } catch (err) {
-                console.warn("Thread event suppressed:", err);
-              }
-            }}
-            onStateChange={(state: any) => {
-              if (state?.error) {
-                console.warn("ChatKit state error suppressed:", state.error);
-              }
-            }}
-          />
+          <ChatKit options={options} />
         </ChatKitErrorBoundary>
       </div>
     </div>
