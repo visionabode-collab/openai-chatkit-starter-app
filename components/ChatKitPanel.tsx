@@ -4,12 +4,14 @@ import type { AssistantStreamEvent } from 'openai/resources/beta/assistants';
 import '@openai-assistants/chatkit-react/dist/index.css';
 import './ChatKitPanel.css';
 
-// Error Boundary Component
+/* --------------------------------------------------------
+   ERROR BOUNDARY — prevents React #185 crash
+-------------------------------------------------------- */
 class ChatKitErrorBoundary extends Component<
   { children: ReactNode; onError?: () => void },
   { hasError: boolean }
 > {
-  constructor(props: { children: ReactNode; onError?: () => void }) {
+  constructor(props: any) {
     super(props);
     this.state = { hasError: false };
   }
@@ -18,32 +20,37 @@ class ChatKitErrorBoundary extends Component<
     return { hasError: true };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.warn("ChatKit Error Boundary caught:", error, errorInfo);
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.warn("ChatKit ErrorBoundary caught:", error, info);
     this.props.onError?.();
   }
 
   render() {
     if (this.state.hasError) {
-      setTimeout(() => {
-        this.setState({ hasError: false });
-      }, 100);
+      // Auto-reset so chat continues working
+      setTimeout(() => this.setState({ hasError: false }), 100);
       return null;
     }
     return this.props.children;
   }
 }
 
+/* --------------------------------------------------------
+   PROPS
+-------------------------------------------------------- */
 interface ChatKitPanelProps {
   apiKey: string;
   assistantId: string;
   threadId: string | null;
   onThreadIdChange: (threadId: string) => void;
   onClose: () => void;
-  isAudioEnabled: boolean;
+  isAudioEnabled: boolean;   // only controls greeting behavior
   onAudioToggle: () => void;
 }
 
+/* --------------------------------------------------------
+   MAIN COMPONENT
+-------------------------------------------------------- */
 export default function ChatKitPanel({
   apiKey,
   assistantId,
@@ -53,91 +60,94 @@ export default function ChatKitPanel({
   isAudioEnabled,
   onAudioToggle
 }: ChatKitPanelProps) {
-  
+
   const [greeting, setGreeting] = useState("");
-  const hasPlayedGreeting = useRef(false);
+  const greetingPlayedThisSession = useRef(false);
   const [errorCount, setErrorCount] = useState(0);
 
-  // Time-based greeting logic
-  const buildTimeGreeting = () => {
-    const now = new Date();
-    const hour = now.getHours();
-
+  /* --------------------------------------------------------
+     TIME-BASED BEAUTIFUL WESCU GREETING
+     • Morning / Afternoon / Night
+     • Only plays ONCE per chat-window-open
+-------------------------------------------------------- */
+  const buildGreeting = () => {
+    const hour = new Date().getHours();
     let prefix = "";
 
-    if (hour >= 0 && hour <= 11) {
-      prefix = "Good Morning";
-    } else if (hour >= 12 && hour <= 18) {
-      prefix = "Good Evening";
-    } else {
-      prefix = "Good Night";
-    }
+    if (hour >= 0 && hour <= 11) prefix = "Good Morning";
+    else if (hour >= 12 && hour <= 17) prefix = "Good Afternoon";
+    else prefix = "Good Evening";
 
-    return `${prefix}, welcome to the official website of WESCU. Here, a world of possibilities awaits you. We are committed to ensuring that your life is enriched with holistic prosperity, hope, and purpose. Whether you're exploring financial solutions, seeking guidance, or simply learning more about our services, know that you are valued and supported every step of the way. Welcome to WESCU—where your journey toward sustainable success begins. How may I help you today?`;
+    return `${prefix}, welcome to the official website of WESCU. Here, a world of possibilities awaits you. We are committed to ensuring that your life is enriched with holistic prosperity, hope, and purpose. Whether you're exploring financial solutions, seeking guidance, or simply learning more about our services, know that you are valued and supported every step of the way. How may I help you today?`;
   };
 
+  /* --------------------------------------------------------
+     EFFECT: Build greeting when chat window opens
+-------------------------------------------------------- */
   useEffect(() => {
-    const timeGreeting = buildTimeGreeting();
-    setGreeting(timeGreeting);
+    const text = buildGreeting();
+    setGreeting(text);
 
-    // Greet once per open
-    if (isAudioEnabled && !hasPlayedGreeting.current) {
-      hasPlayedGreeting.current = true;
-      console.log("🟢 Greeting triggered (text-only).");
+    if (isAudioEnabled && !greetingPlayedThisSession.current) {
+      greetingPlayedThisSession.current = true;
+      console.log("🟢 Greeting triggered (text-only, once).");
     }
   }, [isAudioEnabled]);
 
+  /* --------------------------------------------------------
+     Allow Webflow audio button to toggle greeting ability
+-------------------------------------------------------- */
   const handleAudioToggle = () => {
     onAudioToggle();
   };
 
+  /* --------------------------------------------------------
+     Error Boundary counter
+-------------------------------------------------------- */
   const handleErrorBoundary = () => {
-    setErrorCount((prev) => prev + 1);
-    if (errorCount > 5) {
-      console.error("Too many ChatKit errors.");
-    }
+    setErrorCount((n) => n + 1);
+    if (errorCount > 5) console.error("Too many ChatKit errors detected.");
   };
 
+  /* --------------------------------------------------------
+     CHATKIT OPTIONS
+-------------------------------------------------------- */
   const chatOptions: ChatKitOptions = {
     apiKey,
     assistantId,
     threadId: threadId ?? undefined,
     greeting,
 
-    onError: ({ error }: { error: unknown }) => {
-      console.warn("ChatKit error suppressed:", error);
+    onError: ({ error }) => {
+      console.warn("ChatKit internal error suppressed:", error);
       return;
     },
 
     onThreadEvent: (event: AssistantStreamEvent) => {
       try {
         if (event.event === "thread.created" && "data" in event && event.data?.id) {
-          const newThreadId = event.data.id;
-          console.log("Chat session stored:", newThreadId);
-          onThreadIdChange(newThreadId);
-
-          try {
-            localStorage.setItem("chatThreadId", newThreadId);
-          } catch (e) {
-            console.warn("Failed to save threadId:", e);
-          }
+          const newId = event.data.id;
+          console.log("Chat session saved:", newId);
+          onThreadIdChange(newId);
+          localStorage.setItem("chatThreadId", newId);
         }
-      } catch (error) {
-        console.warn("Thread event error suppressed:", error);
+      } catch (e) {
+        console.warn("Thread event suppressed:", e);
       }
     },
 
-    onStateChange: (state: any) => {
+    onStateChange: (state) => {
       try {
-        if (state.error) {
-          console.warn("ChatKit internal error suppressed:", state.error);
-        }
-      } catch (error) {
-        console.warn("State change handler error suppressed:", error);
+        if (state.error) console.warn("ChatKit state error suppressed:", state.error);
+      } catch (e) {
+        console.warn("State handler error suppressed:", e);
       }
     }
   };
 
+  /* --------------------------------------------------------
+     JSX / LAYOUT
+-------------------------------------------------------- */
   return (
     <div className="chat-panel">
       <div className="chat-header">
@@ -155,7 +165,6 @@ export default function ChatKitPanel({
         <button
           className={`audio-toggle-btn ${isAudioEnabled ? "active" : ""}`}
           onClick={handleAudioToggle}
-          title={isAudioEnabled ? "Mute Audio" : "Enable Audio"}
         >
           <i className={`fas ${isAudioEnabled ? "fa-volume-up" : "fa-volume-mute"}`}></i>
         </button>
