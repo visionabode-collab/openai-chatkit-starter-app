@@ -13,9 +13,9 @@ import {
 
 import { ChatKit, type ChatKitOptions } from "@openai/chatkit-react";
 
-// --------------------------------------------------------------
-// ERROR BOUNDARY
-// --------------------------------------------------------------
+/* -------------------------------------------------------
+   ERROR BOUNDARY
+------------------------------------------------------- */
 class ChatKitErrorBoundary extends Component<
   { children: ReactNode; onError?: () => void },
   { hasError: boolean }
@@ -43,9 +43,9 @@ class ChatKitErrorBoundary extends Component<
   }
 }
 
-// --------------------------------------------------------------
-// PROPS
-// --------------------------------------------------------------
+/* -------------------------------------------------------
+   PROPS
+------------------------------------------------------- */
 interface ChatKitPanelProps {
   apiKey: string;
   assistantId: string;
@@ -56,9 +56,9 @@ interface ChatKitPanelProps {
   onAudioToggle: () => void;
 }
 
-// --------------------------------------------------------------
-// MAIN COMPONENT
-// --------------------------------------------------------------
+/* -------------------------------------------------------
+   MAIN COMPONENT
+------------------------------------------------------- */
 export default function ChatKitPanel({
   apiKey,
   assistantId,
@@ -71,7 +71,7 @@ export default function ChatKitPanel({
   const [greeting, setGreeting] = useState("");
   const played = useRef(false);
 
-  // Dynamic greeting
+  /* Build greeting dynamically */
   const buildGreeting = () => {
     const hour = new Date().getHours();
     const prefix =
@@ -92,11 +92,11 @@ export default function ChatKitPanel({
     }
   }, [isAudioEnabled]);
 
-  // --------------------------------------------------------------
-  // ChatKit options (correct structure for v1.x)
-  // --------------------------------------------------------------
+  /* -------------------------------------------------------
+     ChatKit options (correct for v1.x)
+     🔥 NO API KEY HERE — it must be passed as <ChatKit apiKey="..."/>
+  ------------------------------------------------------- */
   const options: ChatKitOptions = {
-    apiKey,
     assistantId,
     threadId: threadId ?? undefined,
     greeting,
@@ -158,7 +158,7 @@ export default function ChatKitPanel({
       {/* BODY */}
       <div className="chat-body">
         <ChatKitErrorBoundary onError={() => console.warn("Boundary triggered")}>
-          <ChatKit options={options} />
+          <ChatKit apiKey={apiKey} options={options} />
         </ChatKitErrorBoundary>
       </div>
     </div>
