@@ -35,13 +35,15 @@ export default function ChatKitPanel({
         return client_secret;
       },
     },
-    onThreadChange: ({ threadId: newThreadId }: { threadId: string }) => {
-      console.log("Thread changed:", newThreadId);
-      onThreadIdChange(newThreadId);
-      try {
-        localStorage.setItem("chatThreadId", newThreadId);
-      } catch (e) {
-        console.warn("Failed to save thread ID:", e);
+    onThreadChange: ({ threadId: newThreadId }: { threadId: string | null }) => {
+      if (newThreadId) {
+        console.log("Thread changed:", newThreadId);
+        onThreadIdChange(newThreadId);
+        try {
+          localStorage.setItem("chatThreadId", newThreadId);
+        } catch (e) {
+          console.warn("Failed to save thread ID:", e);
+        }
       }
     },
   });
