@@ -1,11 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "edge";
 
 const DEFAULT_CHATKIT_BASE = "https://api.openai.com";
 
-export async function POST(): Promise<Response> {
+export async function POST(req: NextRequest): Promise<Response> {
   try {
+    // 1. Parse the incoming body from the frontend to get the 'user'
+    // (This was missing in the old code!)
+    const body = await req.json();
+    const { user } = body;
+
     const openaiApiKey = process.env.OPENAI_API_KEY;
     if (!openaiApiKey) {
       return NextResponse.json(
@@ -14,10 +19,10 @@ export async function POST(): Promise<Response> {
       );
     }
 
-    const workflowId = process.env.NEXT_PUBLIC_ASSISTANT_ID;
+    const workflowId = process.env.OPENAI_ASSISTANT_ID || process.env.NEXT_PUBLIC_ASSISTANT_ID;
     if (!workflowId) {
       return NextResponse.json(
-        { error: "Missing workflow ID" },
+        { error: "Missing workflow ID (Assistant ID)" },
         { status: 400 }
       );
     }
@@ -33,6 +38,12 @@ export async function POST(): Promise<Response> {
       },
       body: JSON.stringify({
         workflow: { id: workflowId },
+        // 2. Pass the user object through to OpenAI
+        // (This fixes the 400 error)
+        user: user || { 
+            id: "guest_default", 
+            name: "Website Visitor" 
+        },
         chatkit_configuration: {
           file_upload: { enabled: false },
         },
@@ -49,29 +60,11 @@ export async function POST(): Promise<Response> {
       );
     }
 
-    // 🔥🔥 FINAL FIX — ChatKit requires EXACTLY this:
-    const secret =
-      json?.session?.client_secret?.value ??
-      json?.client_secret ??
-      json?.clientSecret ??
-      null;
-
-    if (!secret || typeof secret !== "string") {
-      console.error("SECRET DEBUG RECEIVED:", json);
-      return NextResponse.json(
-        { error: "Upstream missing valid client_secret" },
-        { status: 500 }
-      );
-    }
-
-    // 🔥 Return EXACTLY what ChatKit expects
-    return NextResponse.json({
-      client_secret: secret,
-    });
-  } catch (err) {
-    console.error("Session route error:", err);
+    return NextResponse.json(json);
+  } catch (error) {
+    console.error("Route handler error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal Server Error" },
       { status: 500 }
     );
   }
