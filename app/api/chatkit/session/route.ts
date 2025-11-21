@@ -8,12 +8,18 @@ export async function POST(): Promise<Response> {
   try {
     const openaiApiKey = process.env.OPENAI_API_KEY;
     if (!openaiApiKey) {
-      return NextResponse.json({ error: "Missing OPENAI_API_KEY" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Missing OPENAI_API_KEY" },
+        { status: 500 }
+      );
     }
 
     const workflowId = process.env.NEXT_PUBLIC_ASSISTANT_ID;
     if (!workflowId) {
-      return NextResponse.json({ error: "Missing workflow ID" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing workflow ID" },
+        { status: 400 }
+      );
     }
 
     const apiBase = process.env.CHATKIT_API_BASE ?? DEFAULT_CHATKIT_BASE;
@@ -43,24 +49,30 @@ export async function POST(): Promise<Response> {
       );
     }
 
-    // ✅ Support both possible API shapes
+    // 🔥🔥 FINAL FIX — ChatKit requires EXACTLY this:
     const secret =
       json?.session?.client_secret?.value ??
       json?.client_secret ??
       json?.clientSecret ??
       null;
 
-    if (!secret) {
-      console.error("SECRET DEBUG:", json);
+    if (!secret || typeof secret !== "string") {
+      console.error("SECRET DEBUG RECEIVED:", json);
       return NextResponse.json(
         { error: "Upstream missing valid client_secret" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ client_secret: secret });
+    // 🔥 Return EXACTLY what ChatKit expects
+    return NextResponse.json({
+      client_secret: secret,
+    });
   } catch (err) {
     console.error("Session route error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
