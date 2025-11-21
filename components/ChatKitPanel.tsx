@@ -13,9 +13,9 @@ import {
 
 import { ChatKit } from "@openai/chatkit-react";
 
-// ----------------------------------------------------
-//  Error Boundary
-// ----------------------------------------------------
+// ----------------------------------------------------------------------
+// ERROR BOUNDARY
+// ----------------------------------------------------------------------
 class ChatKitErrorBoundary extends Component<
   { children: ReactNode; onError?: () => void },
   { hasError: boolean }
@@ -43,9 +43,9 @@ class ChatKitErrorBoundary extends Component<
   }
 }
 
-// ----------------------------------------------------
-//  Props
-// ----------------------------------------------------
+// ----------------------------------------------------------------------
+// PROPS
+// ----------------------------------------------------------------------
 interface ChatKitPanelProps {
   apiKey: string;
   assistantId: string;
@@ -56,9 +56,9 @@ interface ChatKitPanelProps {
   onAudioToggle: () => void;
 }
 
-// ----------------------------------------------------
-//  MAIN COMPONENT
-// ----------------------------------------------------
+// ----------------------------------------------------------------------
+// MAIN COMPONENT
+// ----------------------------------------------------------------------
 export default function ChatKitPanel({
   apiKey,
   assistantId,
@@ -71,10 +71,8 @@ export default function ChatKitPanel({
   const [greeting, setGreeting] = useState("");
   const played = useRef(false);
 
-  // Greeting text (simple, no ElevenLabs)
   const buildGreeting = (): string => {
     const hour = new Date().getHours();
-
     const prefix =
       hour <= 11
         ? "Good Morning"
@@ -96,9 +94,7 @@ export default function ChatKitPanel({
 
   return (
     <div className="chat-panel">
-      {/* -------------------------------------------------- */}
-      {/* Header */}
-      {/* -------------------------------------------------- */}
+      {/* HEADER */}
       <div className="chat-header">
         <img
           src="https://cdn.prod.website-files.com/6767f7b80cd69e3a62efb5e1/6767f7b80cd69e3a62efb6f1_wescu-fav-logo%20(1).png"
@@ -123,20 +119,15 @@ export default function ChatKitPanel({
         </button>
       </div>
 
-      {/* -------------------------------------------------- */}
-      {/* Chat Body */}
-      {/* -------------------------------------------------- */}
+      {/* BODY */}
       <div className="chat-body">
         <ChatKitErrorBoundary onError={() => console.warn("Boundary triggered")}>
-
           <ChatKit
             apiKey={apiKey}
             assistantId={assistantId}
             threadId={threadId ?? undefined}
-            greeting={greeting}       {/* ✅ VALID — belongs on <ChatKit />, NOT inside options */}
-            onError={({ error }) =>
-              console.warn("ChatKit suppressed error:", error)
-            }
+            greeting={greeting}
+            onError={({ error }) => console.warn("ChatKit suppressed error:", error)}
             onThreadEvent={(event: any) => {
               try {
                 if (event?.event === "thread.created" && event?.data?.id) {
@@ -153,7 +144,6 @@ export default function ChatKitPanel({
               }
             }}
           />
-
         </ChatKitErrorBoundary>
       </div>
     </div>
