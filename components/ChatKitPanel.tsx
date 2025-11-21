@@ -1,9 +1,3 @@
-Here is the corrected full ChatKitPanel.tsx with no syntax errors, all JSX closed properly, and using the correct ChatKit client_secret format:
-
-------------------------------------------------------------
-📌 ChatKitPanel.tsx  (FULL, FIXED, ERROR-FREE VERSION)
-------------------------------------------------------------
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @next/next/no-img-element */
 "use client";
@@ -28,10 +22,8 @@ export default function ChatKitPanel({
   isAudioEnabled,
   onAudioToggle,
 }: ChatKitPanelProps) {
-
   const played = useRef(false);
 
-  // CHATKIT HOOK — Correct return format for client_secret
   const { control, setThreadId } = useChatKit({
     api: {
       async getClientSecret() {
@@ -51,7 +43,6 @@ export default function ChatKitPanel({
 
     onThreadChange: ({ threadId: newThreadId }: { threadId: string | null }) => {
       if (newThreadId) {
-        console.log("Thread changed:", newThreadId);
         onThreadIdChange(newThreadId);
 
         try {
@@ -63,20 +54,18 @@ export default function ChatKitPanel({
     },
   });
 
-  // Load thread ID on mount
   useEffect(() => {
     if (threadId) {
-      setThreadId(threadId).catch((err: any) =>
-        console.warn("Failed to set thread:", err)
-      );
+      setThreadId(threadId).catch((err: any) => {
+        console.warn("Failed to set thread:", err);
+      });
     }
   }, [threadId, setThreadId]);
 
-  // Audio placeholder
   useEffect(() => {
     if (isAudioEnabled && !played.current) {
       played.current = true;
-      console.log("Greeting audio would play here.");
+      console.log("Greeting audio placeholder");
     }
   }, [isAudioEnabled]);
 
