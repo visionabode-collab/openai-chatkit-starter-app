@@ -19,20 +19,17 @@ class ChatKitErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.warn('ChatKit Error Boundary caught error (suppressed):', error, errorInfo);
-    // Call optional error handler
+    console.warn("ChatKit Error Boundary caught:", error, errorInfo);
     this.props.onError?.();
   }
 
   render() {
     if (this.state.hasError) {
-      // Reset error state after a brief delay to allow recovery
       setTimeout(() => {
         this.setState({ hasError: false });
       }, 100);
-      return null; // Don't render anything while recovering
+      return null;
     }
-
     return this.props.children;
   }
 }
@@ -54,173 +51,113 @@ export default function ChatKitPanel({
   onThreadIdChange,
   onClose,
   isAudioEnabled,
-  onAudioToggle,
+  onAudioToggle
 }: ChatKitPanelProps) {
-  const [greeting, setGreeting] = useState('');
-  const [isGreetingPlaying, setIsGreetingPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  
+  const [greeting, setGreeting] = useState("");
   const hasPlayedGreeting = useRef(false);
   const [errorCount, setErrorCount] = useState(0);
 
-  useEffect(() => {
-    const greetingText = `Hello! Welcome to Western United Credit Union. I'm Claire, your virtual assistant. I'm here to help you with information about our services, loans, accounts, and more. How can I assist you today?`;
-    setGreeting(greetingText);
+  // Time-based greeting logic
+  const buildTimeGreeting = () => {
+    const now = new Date();
+    const hour = now.getHours();
 
+    let prefix = "";
+
+    if (hour >= 0 && hour <= 11) {
+      prefix = "Good Morning";
+    } else if (hour >= 12 && hour <= 18) {
+      prefix = "Good Evening";
+    } else {
+      prefix = "Good Night";
+    }
+
+    return `${prefix}, welcome to the official website of WESCU. Here, a world of possibilities awaits you. We are committed to ensuring that your life is enriched with holistic prosperity, hope, and purpose. Whether you're exploring financial solutions, seeking guidance, or simply learning more about our services, know that you are valued and supported every step of the way. Welcome to WESCU—where your journey toward sustainable success begins. How may I help you today?`;
+  };
+
+  useEffect(() => {
+    const timeGreeting = buildTimeGreeting();
+    setGreeting(timeGreeting);
+
+    // Greet once per open
     if (isAudioEnabled && !hasPlayedGreeting.current) {
       hasPlayedGreeting.current = true;
-      playGreeting(greetingText);
+      console.log("🟢 Greeting triggered (text-only).");
     }
   }, [isAudioEnabled]);
 
-  const playGreeting = async (text: string) => {
-    try {
-      console.log('Playing greeting... Audio enabled:', isAudioEnabled);
-      
-      if (!isAudioEnabled) {
-        console.log('Audio muted — greeting stopped');
-        return;
-      }
-
-      setIsGreetingPlaying(true);
-
-      const response = await fetch('https://api.elevenlabs.io/v1/text-to-speech/pqHfZKP75CvOlQylNhV4', {
-        method: 'POST',
-        headers: {
-          'Accept': 'audio/mpeg',
-          'xi-api-key': '70b1e4b77a8d8f03f3c14beb39b3d8e0',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text,
-          model_id: 'eleven_monolingual_v1',
-          voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75,
-          },
-        }),
-      });
-
-      if (!response.ok) throw new Error('TTS request failed');
-
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-
-      audio.onended = () => {
-        console.log('Greeting finished');
-        setIsGreetingPlaying(false);
-        URL.revokeObjectURL(audioUrl);
-        audioRef.current = null;
-      };
-
-      audio.onerror = () => {
-        console.error('Audio playback error');
-        setIsGreetingPlaying(false);
-        URL.revokeObjectURL(audioUrl);
-        audioRef.current = null;
-      };
-
-      await audio.play();
-      console.log('✅ Greeting playing!');
-    } catch (error) {
-      console.error('Error playing greeting:', error);
-      setIsGreetingPlaying(false);
-    }
-  };
-
   const handleAudioToggle = () => {
-    if (isGreetingPlaying && audioRef.current) {
-      console.log('🔴 Stopping audio playback...');
-      audioRef.current.pause();
-      audioRef.current = null;
-      setIsGreetingPlaying(false);
-      console.log('Audio muted — greeting stopped');
-    }
     onAudioToggle();
   };
 
   const handleErrorBoundary = () => {
-    setErrorCount(prev => prev + 1);
-    // If too many errors, could show a message or reset
+    setErrorCount((prev) => prev + 1);
     if (errorCount > 5) {
-      console.error('Too many ChatKit errors, consider refreshing');
+      console.error("Too many ChatKit errors.");
     }
   };
 
-  const chatoptions: ChatKitOptions = {
+  const chatOptions: ChatKitOptions = {
     apiKey,
     assistantId,
     threadId: threadId ?? undefined,
     greeting,
-    
-    // Comprehensive error suppression
+
     onError: ({ error }: { error: unknown }) => {
-      console.warn('ChatKit error (suppressed for stability):', error);
-      // Don't throw - just log and continue
+      console.warn("ChatKit error suppressed:", error);
       return;
     },
 
-    // Handle thread events with error wrapping
     onThreadEvent: (event: AssistantStreamEvent) => {
       try {
-        // Wrap event handling in try-catch to prevent crashes
-        if (event.event === 'thread.created' && 'data' in event && event.data?.id) {
+        if (event.event === "thread.created" && "data" in event && event.data?.id) {
           const newThreadId = event.data.id;
-          console.log('Chat session saved:', newThreadId);
+          console.log("Chat session stored:", newThreadId);
           onThreadIdChange(newThreadId);
-          
-          // Save to localStorage
+
           try {
-            localStorage.setItem('chatThreadId', newThreadId);
+            localStorage.setItem("chatThreadId", newThreadId);
           } catch (e) {
-            console.warn('Failed to save thread ID to localStorage:', e);
+            console.warn("Failed to save threadId:", e);
           }
         }
       } catch (error) {
-        // Silently catch any errors in event handling
-        console.warn('Error in thread event handler (suppressed):', error);
+        console.warn("Thread event error suppressed:", error);
       }
     },
 
-    // Additional safety wrapper for all ChatKit operations
     onStateChange: (state: any) => {
       try {
-        // Safely handle state changes
         if (state.error) {
-          console.warn('ChatKit state error (suppressed):', state.error);
+          console.warn("ChatKit internal error suppressed:", state.error);
         }
       } catch (error) {
-        console.warn('Error in state change handler (suppressed):', error);
+        console.warn("State change handler error suppressed:", error);
       }
-    },
+    }
   };
 
   return (
     <div className="chat-panel">
       <div className="chat-header">
-        <img 
-          src="https://cdn.prod.website-files.com/6767f7b80cd69e3a62efb5e1/6767f7b80cd69e3a62efb6f1_wescu-fav-logo%20(1).png" 
-          alt="Claire" 
+        <img
+          src="https://cdn.prod.website-files.com/6767f7b80cd69e3a62efb5e1/6767f7b80cd69e3a62efb6f1_wescu-fav-logo%20(1).png"
+          alt="Claire"
           className="chat-avatar"
         />
+
         <div className="chat-info">
           <h3>Claire</h3>
           <p>WESCU Virtual Assistant</p>
         </div>
-        
-        <button 
-          className={`audio-toggle-btn ${isAudioEnabled ? 'active' : ''}`}
+
+        <button
+          className={`audio-toggle-btn ${isAudioEnabled ? "active" : ""}`}
           onClick={handleAudioToggle}
           title={isAudioEnabled ? "Mute Audio" : "Enable Audio"}
         >
-          <i className={`fas ${isAudioEnabled ? 'fa-volume-up' : 'fa-volume-mute'}`}></i>
+          <i className={`fas ${isAudioEnabled ? "fa-volume-up" : "fa-volume-mute"}`}></i>
         </button>
 
         <button className="close-btn" onClick={onClose}>
@@ -230,7 +167,7 @@ export default function ChatKitPanel({
 
       <div className="chat-body">
         <ChatKitErrorBoundary onError={handleErrorBoundary}>
-          <ChatKit options={chatoptions} />
+          <ChatKit options={chatOptions} />
         </ChatKitErrorBoundary>
       </div>
     </div>
