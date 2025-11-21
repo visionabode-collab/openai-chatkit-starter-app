@@ -11,10 +11,10 @@ import {
   ReactNode,
 } from "react";
 
-import { ChatKit, type ChatKitOptions } from "@openai/chatkit-react";
+import { ChatKit } from "@openai/chatkit-react";
 
 // ----------------------------------------------------
-// ERROR BOUNDARY TO STOP CHATKIT CRASH FREEZES
+//  Error Boundary
 // ----------------------------------------------------
 class ChatKitErrorBoundary extends Component<
   { children: ReactNode; onError?: () => void },
@@ -30,7 +30,7 @@ class ChatKitErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.warn("🔥 ChatKit ErrorBoundary caught:", error, info);
+    console.warn("ChatKit ErrorBoundary caught:", error, info);
     this.props.onError?.();
   }
 
@@ -44,7 +44,7 @@ class ChatKitErrorBoundary extends Component<
 }
 
 // ----------------------------------------------------
-// PROPS
+//  Props
 // ----------------------------------------------------
 interface ChatKitPanelProps {
   apiKey: string;
@@ -57,7 +57,7 @@ interface ChatKitPanelProps {
 }
 
 // ----------------------------------------------------
-// MAIN COMPONENT
+//  MAIN COMPONENT
 // ----------------------------------------------------
 export default function ChatKitPanel({
   apiKey,
@@ -71,13 +71,14 @@ export default function ChatKitPanel({
   const [greeting, setGreeting] = useState("");
   const played = useRef(false);
 
-  // Auto-generate greeting text
-  const buildGreeting = () => {
+  // Greeting text (simple, no ElevenLabs)
+  const buildGreeting = (): string => {
     const hour = new Date().getHours();
+
     const prefix =
-      hour < 12
+      hour <= 11
         ? "Good Morning"
-        : hour < 17
+        : hour <= 17
         ? "Good Afternoon"
         : "Good Evening";
 
@@ -89,41 +90,15 @@ export default function ChatKitPanel({
 
     if (isAudioEnabled && !played.current) {
       played.current = true;
-      console.log("Greeting logged (no audio)");
+      console.log("Greeting fired");
     }
   }, [isAudioEnabled]);
 
-  // ----------------------------------------------------
-  // VALID ChatKitOptions (NO assistantId/apiKey/threadId HERE)
-  // ----------------------------------------------------
-  const options: ChatKitOptions = {
-    greeting,
-
-    onError: ({ error }) => {
-      console.warn("⚠️ ChatKit suppressed error:", error);
-    },
-
-    onThreadEvent: (event: any) => {
-      try {
-        if (event?.event === "thread.created" && event?.data?.id) {
-          onThreadIdChange(event.data.id);
-          localStorage.setItem("chatThreadId", event.data.id);
-        }
-      } catch (err) {
-        console.warn("⚠️ Thread event suppressed:", err);
-      }
-    },
-
-    onStateChange: (state: any) => {
-      if (state?.error) {
-        console.warn("⚠️ ChatKit state error suppressed:", state.error);
-      }
-    },
-  };
-
   return (
     <div className="chat-panel">
-      {/* HEADER */}
+      {/* -------------------------------------------------- */}
+      {/* Header */}
+      {/* -------------------------------------------------- */}
       <div className="chat-header">
         <img
           src="https://cdn.prod.website-files.com/6767f7b80cd69e3a62efb5e1/6767f7b80cd69e3a62efb6f1_wescu-fav-logo%20(1).png"
@@ -136,7 +111,6 @@ export default function ChatKitPanel({
           <p>WESCU Virtual Assistant</p>
         </div>
 
-        {/* AUDIO TOGGLE (just UI toggle now) */}
         <button
           className={`audio-toggle-btn ${isAudioEnabled ? "active" : ""}`}
           onClick={onAudioToggle}
@@ -144,21 +118,42 @@ export default function ChatKitPanel({
           <i className={`fas ${isAudioEnabled ? "fa-volume-up" : "fa-volume-mute"}`} />
         </button>
 
-        {/* CLOSE */}
         <button className="close-btn" onClick={onClose}>
           <i className="fas fa-times" />
         </button>
       </div>
 
-      {/* BODY */}
+      {/* -------------------------------------------------- */}
+      {/* Chat Body */}
+      {/* -------------------------------------------------- */}
       <div className="chat-body">
-        <ChatKitErrorBoundary onError={() => console.warn("BOUNDARY RECOVERED")}>
+        <ChatKitErrorBoundary onError={() => console.warn("Boundary triggered")}>
+
           <ChatKit
             apiKey={apiKey}
             assistantId={assistantId}
             threadId={threadId ?? undefined}
-            options={options}
+            greeting={greeting}       {/* ✅ VALID — belongs on <ChatKit />, NOT inside options */}
+            onError={({ error }) =>
+              console.warn("ChatKit suppressed error:", error)
+            }
+            onThreadEvent={(event: any) => {
+              try {
+                if (event?.event === "thread.created" && event?.data?.id) {
+                  onThreadIdChange(event.data.id);
+                  localStorage.setItem("chatThreadId", event.data.id);
+                }
+              } catch (err) {
+                console.warn("Thread event suppressed:", err);
+              }
+            }}
+            onStateChange={(state: any) => {
+              if (state?.error) {
+                console.warn("ChatKit state error suppressed:", state.error);
+              }
+            }}
           />
+
         </ChatKitErrorBoundary>
       </div>
     </div>
