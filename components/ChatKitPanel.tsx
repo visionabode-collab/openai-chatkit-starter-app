@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @next/next/no-img-element */
+"use client";
 
 import {
   useState,
@@ -13,9 +13,9 @@ import {
 
 import { ChatKit, type ChatKitOptions } from "@openai/chatkit-react";
 
-// ---------------------
-// Error Boundary
-// ---------------------
+// ----------------------------------------------------
+//  Error Boundary
+// ----------------------------------------------------
 class ChatKitErrorBoundary extends Component<
   { children: ReactNode; onError?: () => void },
   { hasError: boolean }
@@ -43,6 +43,9 @@ class ChatKitErrorBoundary extends Component<
   }
 }
 
+// ----------------------------------------------------
+//  Props
+// ----------------------------------------------------
 interface ChatKitPanelProps {
   apiKey: string;
   assistantId: string;
@@ -53,6 +56,9 @@ interface ChatKitPanelProps {
   onAudioToggle: () => void;
 }
 
+// ----------------------------------------------------
+//  MAIN COMPONENT
+// ----------------------------------------------------
 export default function ChatKitPanel({
   apiKey,
   assistantId,
@@ -65,7 +71,7 @@ export default function ChatKitPanel({
   const [greeting, setGreeting] = useState("");
   const played = useRef(false);
 
-  // Build greeting (Good Morning / Good Afternoon / Good Evening)
+  // Greeting builder
   const buildGreeting = (): string => {
     const hour = new Date().getHours();
 
@@ -88,10 +94,10 @@ export default function ChatKitPanel({
     }
   }, [isAudioEnabled]);
 
-  // ✅ ChatKitOptions WITHOUT apiKey
+  // ----------------------------------------------------
+  // ChatKitOptions (IMPORTANT: **NO assistantId**, **NO apiKey**, **NO threadId**)
+  // ----------------------------------------------------
   const options: ChatKitOptions = {
-    assistantId,
-    threadId: threadId ?? undefined,
     greeting,
 
     onError: ({ error }) => {
@@ -134,22 +140,28 @@ export default function ChatKitPanel({
           className={`audio-toggle-btn ${isAudioEnabled ? "active" : ""}`}
           onClick={onAudioToggle}
         >
-          <i
-            className={`fas ${
-              isAudioEnabled ? "fa-volume-up" : "fa-volume-mute"
-            }`}
-          ></i>
+          <i className={`fas ${isAudioEnabled ? "fa-volume-up" : "fa-volume-mute"}`} />
         </button>
 
         <button className="close-btn" onClick={onClose}>
-          <i className="fas fa-times"></i>
+          <i className="fas fa-times" />
         </button>
       </div>
 
       <div className="chat-body">
         <ChatKitErrorBoundary onError={() => console.warn("Boundary triggered")}>
-          {/* ✅ apiKey goes HERE, not inside options */}
-          <ChatKit apiKey={apiKey} options={options} />
+          {/*
+            -------------------------------------------
+            NEW ChatKit API:
+            assistantId, apiKey, threadId go *DIRECTLY* on <ChatKit/>
+            -------------------------------------------
+          */}
+          <ChatKit
+            apiKey={apiKey}
+            assistantId={assistantId}
+            threadId={threadId ?? undefined}
+            options={options}
+          />
         </ChatKitErrorBoundary>
       </div>
     </div>
