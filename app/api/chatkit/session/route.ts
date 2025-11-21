@@ -23,8 +23,7 @@ export async function POST(): Promise<Response> {
     }
 
     const apiBase = process.env.CHATKIT_API_BASE ?? DEFAULT_CHATKIT_BASE;
-    
-    // ⚠️ FIX: Parentheses instead of backticks for fetch
+
     const upstreamResponse = await fetch(`${apiBase}/v1/chatkit/sessions`, {
       method: "POST",
       headers: {
@@ -50,19 +49,28 @@ export async function POST(): Promise<Response> {
       );
     }
 
-    // ✅ EXTRACT ONLY THE CLIENT SECRET
-    const client_secret = json?.session?.client_secret;
-    
-    if (!client_secret) {
-      console.error("Missing client_secret in response:", json);
+    // ------- 🔥 CRITICAL FIX HERE -------
+    const secret = json?.session?.client_secret;
+    if (!secret) {
+      console.error("Missing client_secret in upstream response:", json);
       return NextResponse.json(
         { error: "Missing client_secret from upstream" },
         { status: 500 }
       );
     }
 
-    // ✅ Return ONLY { client_secret }
-    return NextResponse.json({ client_secret });
+    // ChatKit expects this EXACT structure:
+    const formatted = {
+      client_secret: {
+        value: secret.value,
+        id: secret.id,
+        expires_at: secret.expires_at
+      }
+    };
+
+    return NextResponse.json(formatted);
+    // ------- END FIX -------
+
   } catch (err) {
     console.error("Session route error:", err);
     return NextResponse.json(
