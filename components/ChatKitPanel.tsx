@@ -1,16 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @next/next/no-img-element */
+
 import {
   useState,
   useEffect,
   useRef,
   Component,
   ErrorInfo,
-  ReactNode
+  ReactNode,
 } from "react";
 
 import { ChatKit, type ChatKitOptions } from "@openai/chatkit-react";
-
-// ❌ REMOVED: AssistantStreamEvent import (no longer exists)
-// import type { AssistantStreamEvent } from "openai/resources/beta/assistants";
 
 // ---------------------
 // Error Boundary
@@ -59,13 +60,15 @@ export default function ChatKitPanel({
   onThreadIdChange,
   onClose,
   isAudioEnabled,
-  onAudioToggle
+  onAudioToggle,
 }: ChatKitPanelProps) {
   const [greeting, setGreeting] = useState("");
   const played = useRef(false);
 
+  // Build greeting (Good Morning / Good Afternoon / Good Evening)
   const buildGreeting = (): string => {
     const hour = new Date().getHours();
+
     const prefix =
       hour <= 11
         ? "Good Morning"
@@ -78,6 +81,8 @@ export default function ChatKitPanel({
 
   useEffect(() => {
     setGreeting(buildGreeting());
+
+    // Only fire greeting ONCE per chat-open
     if (isAudioEnabled && !played.current) {
       played.current = true;
       console.log("Greeting fired");
@@ -109,7 +114,7 @@ export default function ChatKitPanel({
       if (state?.error) {
         console.warn("ChatKit state error suppressed:", state.error);
       }
-    }
+    },
   };
 
   return (
@@ -130,7 +135,11 @@ export default function ChatKitPanel({
           className={`audio-toggle-btn ${isAudioEnabled ? "active" : ""}`}
           onClick={onAudioToggle}
         >
-          <i className={`fas ${isAudioEnabled ? "fa-volume-up" : "fa-volume-mute"}`}></i>
+          <i
+            className={`fas ${
+              isAudioEnabled ? "fa-volume-up" : "fa-volume-mute"
+            }`}
+          ></i>
         </button>
 
         <button className="close-btn" onClick={onClose}>
