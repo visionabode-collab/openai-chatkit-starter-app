@@ -82,15 +82,14 @@ export default function ChatKitPanel({
   useEffect(() => {
     setGreeting(buildGreeting());
 
-    // Only fire greeting ONCE per chat-open
     if (isAudioEnabled && !played.current) {
       played.current = true;
       console.log("Greeting fired");
     }
   }, [isAudioEnabled]);
 
+  // ✅ ChatKitOptions WITHOUT apiKey
   const options: ChatKitOptions = {
-    apiKey,
     assistantId,
     threadId: threadId ?? undefined,
     greeting,
@@ -149,7 +148,8 @@ export default function ChatKitPanel({
 
       <div className="chat-body">
         <ChatKitErrorBoundary onError={() => console.warn("Boundary triggered")}>
-          <ChatKit options={options} />
+          {/* ✅ apiKey goes HERE, not inside options */}
+          <ChatKit apiKey={apiKey} options={options} />
         </ChatKitErrorBoundary>
       </div>
     </div>
