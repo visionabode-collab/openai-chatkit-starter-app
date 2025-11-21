@@ -4,12 +4,12 @@ export const runtime = "edge";
 
 const DEFAULT_CHATKIT_BASE = "https://api.openai.com";
 
-export async function POST(request: Request): Promise<Response> {
+export async function POST(): Promise<Response> {
   try {
     const openaiApiKey = process.env.OPENAI_API_KEY;
     if (!openaiApiKey) {
       return NextResponse.json(
-        { error: "Missing OPENAI_API_KEY environment variable" },
+        { error: "Missing OPENAI_API_KEY" },
         { status: 500 }
       );
     }
@@ -17,15 +17,15 @@ export async function POST(request: Request): Promise<Response> {
     const workflowId = process.env.NEXT_PUBLIC_ASSISTANT_ID;
     if (!workflowId) {
       return NextResponse.json(
-        { error: "Missing workflow id" },
+        { error: "Missing workflow ID" },
         { status: 400 }
       );
     }
 
     const apiBase = process.env.CHATKIT_API_BASE ?? DEFAULT_CHATKIT_BASE;
-    const url = `${apiBase}/v1/chatkit/sessions`;
     
-    const upstreamResponse = await fetch(url, {
+    // ⚠️ FIX: Parentheses instead of backticks for fetch
+    const upstreamResponse = await fetch(`${apiBase}/v1/chatkit/sessions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -35,33 +35,36 @@ export async function POST(request: Request): Promise<Response> {
       body: JSON.stringify({
         workflow: { id: workflowId },
         chatkit_configuration: {
-          file_upload: {
-            enabled: false,
-          },
+          file_upload: { enabled: false },
         },
       }),
     });
 
-    const upstreamJson = await upstreamResponse.json().catch(() => ({}));
+    const json = await upstreamResponse.json();
 
     if (!upstreamResponse.ok) {
-      console.error("OpenAI ChatKit session creation failed", {
-        status: upstreamResponse.status,
-        statusText: upstreamResponse.statusText,
-        body: upstreamJson,
-      });
+      console.error("OpenAI API error:", json);
       return NextResponse.json(
-        {
-          error: `Failed to create session: ${upstreamResponse.statusText}`,
-          details: upstreamJson,
-        },
+        { error: json.error?.message ?? "Failed to create session" },
         { status: upstreamResponse.status }
       );
     }
 
-    return NextResponse.json(upstreamJson);
-  } catch (error) {
-    console.error("Unexpected error creating session:", error);
+    // ✅ EXTRACT ONLY THE CLIENT SECRET
+    const client_secret = json?.session?.client_secret;
+    
+    if (!client_secret) {
+      console.error("Missing client_secret in response:", json);
+      return NextResponse.json(
+        { error: "Missing client_secret from upstream" },
+        { status: 500 }
+      );
+    }
+
+    // ✅ Return ONLY { client_secret }
+    return NextResponse.json({ client_secret });
+  } catch (err) {
+    console.error("Session route error:", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
